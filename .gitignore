@@ -1,0 +1,7 @@
+#ignore java files
+
+lib/
+models/
+log.txt
+__pycache__/
+*.json
