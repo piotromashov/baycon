@@ -5,3 +5,6 @@ models/
 log.txt
 __pycache__/
 *.json
+.DS_Store
+.ipynb_checkpoints
+log*
