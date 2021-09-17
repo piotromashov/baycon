@@ -1,15 +1,10 @@
-import subprocess
-import os
 import numpy as np
-import json
 from sklearn.ensemble import RandomForestRegressor
-from warnings import catch_warnings,simplefilter
 import pandas as pd
 import acquisition_functions as acq_functions
 import warnings
 warnings.filterwarnings("ignore")
 import time
-import pickle
 import dex_python_utilities as du
 import python_utilities as utils
 
@@ -47,10 +42,9 @@ def find_changes(alternative,template_numeric,positive_target):
     if positive_target:
         return np.argwhere(alternative>template_numeric)
     return np.argwhere(alternative<template_numeric)
-# distance(best_x,template_numeric,positive_target)
 
 #generates random alternatives for a given template
-def generate_min_max_alternatives_from_template_2(n,known_alternatives,template,num_changes,
+def generate_min_max_alternatives_from_template(n,known_alternatives,template,num_changes,
                                                   improvement=True,min_values=[],max_values=[]): 
     print("Generating alternatives from template.")
     features_amount = len(template)
@@ -58,39 +52,17 @@ def generate_min_max_alternatives_from_template_2(n,known_alternatives,template,
         num_changes = num_changes//2
         
     min_change=1
-    if num_changes==0:
+    if not num_changes:
         num_changes=min_change
     print("num_changes:",num_changes,'min_change:',min_change)
-    
-    # if len(min_values)<1:
-    #     min_values=2
-    #     max_values=0
-    #     print('here')
-    
-    # n = 10000
 
     samples = np.random.rand(n,len(template)) #random matrix with n samples with values between 0 and 1
-
-    max_change = max(max_values) #maximum allowed change for one attribute (e.g., from 0 to 3)
     
-    # ranges = (np.arange(0,100,100//(2*max_change+1))/100)[::-1][1:-1]
-    # new_values = []
-    # for n in range(max_change+1):
-    #     new_values.append(n+1)
-    #     new_values.append(-(n+1))
-    # samples[samples>ranges[0]]=new_values[0]  
-    # for k in range(len(ranges)-2):
-    #     print("current index {}, ranges length {}".format(k, len(ranges)))
-    #     print("samples shape {}".format(samples.shape))
-    #     samples[(samples<=ranges[k]) & (samples>ranges[k+1])]=new_values[k+1]
+    #maximum and minimum allowed change for one attribute (e.g., from 0 to 3)
+    max_value = max(max_values) 
+    min_value = -max_value
 
-    # samples[(samples<=ranges[len(ranges)-1]) & (samples>=0)]=0
-
-    # print(samples[:10])
-
-    min_value = -max_change
-    random_matrix = np.random.randint(min_value,max_change,(n,features_amount))
-    print(random_matrix[:10])
+    random_matrix = np.random.randint(min_value,max_value,(n,features_amount))
 
     samples = random_matrix+template #increase each row with the template (i.e., increase template values by zero,one or two)
     
@@ -100,106 +72,70 @@ def generate_min_max_alternatives_from_template_2(n,known_alternatives,template,
     samples[samples<min_values]=0 
 
     samples = samples.astype(int)
-    print(samples.shape)
     
     #increase atrute values that have lower values thetemplate
     
     #remove samples that are same as the template
     samples=samples[np.sum(samples!=template,axis=1)>0] 
-    print(samples.shape)
 
     #remove samples that have more changes than max_num_changes ot less cnhanges than min_change
     d = distance_arr(samples,template,improvement)
     samples=samples[(d<=num_changes) & (d>=min_change)]
     
-    print(samples.shape)
     #remove samples that already exist in known_alternatives
     last_idx = len(known_alternatives)
     samples = np.vstack((known_alternatives,samples))
     _,idx_arr = np.unique(samples,axis=0,return_index=True)
     idx_arr = idx_arr[idx_arr>last_idx]
     samples = samples[idx_arr]
-    print(samples.shape)
 
     print("Done. Sample size:",samples.shape)
     return samples
 
 def update_random_alternatives(random_sample_size,known_alternatives,template_numeric,num_changes,positive_target,min_values,max_values):
-    return generate_min_max_alternatives_from_template_2(random_sample_size,known_alternatives,template_numeric,num_changes,positive_target,
-                                                        min_values,max_values)
+    return generate_min_max_alternatives_from_template(
+        random_sample_size,
+        known_alternatives,
+        template_numeric,
+        num_changes,
+        positive_target,
+        min_values,
+        max_values
+    )
 
 #calculate objective fuction for a list aletrnatives
-def calculate_objective_all(model,attribute_values,alternatives,template_numeric,target,output_values,positive_target,run=0):
-#     cmd_eval_base = 'java -jar ./lib/DEXxSearch-1.2-dev.jar SIMPLE_EVALUATION models/'
-#     alternative_path =str(run)+'_template_alternatives.json'
-#     with open(alternative_path, 'w') as outfile:
-# #         json.dump(str(alternatives).replace(" ","").replace("'",'"'), outfile)
-#             json.dump(alternatives, outfile)
-
-# #     cmd = cmd_eval_base+model+" "+str(alternatives).replace(" ","").replace("'",'"')
-#     cmd = cmd_eval_base+model+" "+alternative_path
-
-#     s = subprocess.check_output(cmd,shell=True)
-#     str_value = json.loads(str(s)[2:-3])
-#     print(str_value)
-
-#     evaluation_values = []
-#     for val in str_value:
-#         evaluation_values.append(int(output_values.index(val[0]['_'])))
-# #     print(evaluation_values)
-#     evaluation_values = np.array(evaluation_values)
-    
-    
+def calculate_objective_all(model,alternatives,template_numeric,target,positive_target):
     #get model prediction on those values
     evaluation_values = model.predict(alternatives)
     evaluation_values = np.array(evaluation_values)
 
-    
-    # check if we are moving towards the target or not.
-    if positive_target:
-        #target_eval = 1+(evaluation_values-target)
-        target_eval = evaluation_values>=target 
-    else:
-        #target_eval = 1+(target-evaluation_values)
-        target_eval = evaluation_values<=target
-
+    #TODO: what is this 2 multiplying?
     overall_num_changes = 2*len(template_numeric)
-#     target_eval[target_eval>=2] = 1/overall_num_changes
-#     target_eval[target_eval<0] = 0
 
-#     print(target,'evaluation values:',evaluation_values)
-    
     # here should go the cost of attribute changes and their weights
     num_changes = distance_arr(alternatives, template_numeric, positive_target)
 
     # closeness to feature space of the potential counterfactual to the initial instance.
     relative_similarity = 1-num_changes/overall_num_changes
-    objective_value = relative_similarity*target_eval
 
-#     print('relative_similarity:',relative_similarity,'target_eval:',
-#           target_eval,'objective_value',objective_value)
-    
+    # check if we are moving towards the target or not.
+    #if we are not moving towards the target, this is weighted as 0
+    target_eval = evaluation_values>=target if positive_target else evaluation_values<=target
+    objective_value = relative_similarity*target_eval    
     return objective_value
-
-
-       
-# surrogate or approximation for the objective function
-def surrogate(model, X):
-    # catch any warning generated when making a prediction
-    with catch_warnings():
-    # ignore generated warnings
-        simplefilter("ignore")
-        return model.predict(X, return_std=True)
 
 #returns mean values and standard deviation calculated over the predictions
 #from each separate model from a given ensemble models
 def get_ensemble_scores(ens_model,X):
     ens_predictions = []
     for est in range(len(ens_model.estimators_)): 
+        #TODO: what are those estimators?
         ens_predictions.append(ens_model.estimators_[est].predict(X))
     ens_predictions = np.array(ens_predictions)
+
     mu = ens_predictions.mean(axis=0)
-    return ens_predictions.mean(axis=0),ens_predictions.std(axis=0)
+    std = ens_predictions.std(axis=0)
+    return mu, std
 
 #returns an array of predictions from each separate model in a given ensemble model
 def get_ensemble_predictions(ens_model,X):
@@ -208,36 +144,34 @@ def get_ensemble_predictions(ens_model,X):
         ens_predictions.append(ens_model.estimators_[est].predict(X))
     return np.array(ens_predictions)
 
-
 # returns scores caclulated with an acquisition function (see acqusition_functions.py)
-def acquisition(X, X_candidates, model):
-    yhat, _ = get_ensemble_scores(model,X)
-    best = max(yhat)
+def acquisition(model, X, X_candidates):
+    mu, _ = get_ensemble_scores(model,X)
+    best_mu = max(mu)
     mu, std = get_ensemble_scores(model,X_candidates)
-    score = acq_functions.EI(mu, std, best, epsilon=.001)
+    score = acq_functions.EI(mu, std, best_mu, epsilon=.001)
     return score
 
 # optimize the acquisition function
-from scipy.stats import norm
-def opt_acquisition(X, y, model,X_candidates,attribute_values,template_string, top_n = 10):
+def opt_acquisition(model, X, X_candidates, top_n = 10):
     # calculate the acquisition function for each candidate
-    scores = acquisition(X, X_candidates, model)
+    scores = acquisition(model, X, X_candidates)
     # locate the index of the largest scores
     if top_n>len(scores)//2:
         top_n = len(scores)//2
-    ix = np.argpartition(scores, -top_n)[-top_n:] #get top_n candidates
-    best_alternative_numeric= X_candidates[ix]
-    rand_idx =np.random.randint(0,len(X_candidates),top_n) #get_random_cadidates
-    rand_alternative_numeric =  X_candidates[rand_idx]
+    best_alternatives_index = np.argpartition(scores, -top_n)[-top_n:] #get top_n candidates
+    best_alternatives= X_candidates[best_alternatives_index]
+    random_alternatives_index =np.random.randint(0,len(X_candidates),top_n) #get_random_candidates
+    random_alternatives =  X_candidates[random_alternatives_index]
     
     #remove candidates from the random candidates, as they will be available in X
-    rm_idx = np.concatenate([rand_idx,ix])
-    X_candidates = np.delete(X_candidates,rm_idx,axis=0)
+    remove_index = np.concatenate([random_alternatives_index,best_alternatives_index])
+    X_candidates = np.delete(X_candidates,remove_index,axis=0)
 
     #join top-n candidates and n random cadindates and calculate their string representations
-    alternatives_numeric = np.vstack([best_alternative_numeric,rand_alternative_numeric])
+    alternatives = np.vstack([best_alternatives,random_alternatives])
         
-    return alternatives_numeric,X_candidates
+    return alternatives,X_candidates
 
 
 #updates columns at index indx with the given values val from a given matrix A, updates eac
@@ -297,7 +231,7 @@ def remove_duplicates(samples,known_alternatives):
     return list(samples)
 
 #check promising_alternatives_pool 
-def check_promising_alternatives(dex_model,model,alternatives,best_y,best_pool,threshold,template,template_string,attribute_values,target,output_values,positive_target,run):
+def check_promising_alternatives(dex_model,model,alternatives,best_y,best_pool,threshold,template,target,positive_target):
     print('checking promising_alternatives')
     top_n = 1000
     if len(alternatives)==0:
@@ -325,14 +259,8 @@ def check_promising_alternatives(dex_model,model,alternatives,best_y,best_pool,t
     #for each top-ranked alternative
     #check real objective value of the alternative and its neighbours
     if len(alternatives)>0:
-        # k = sorted(template_string.keys())
-        # alternatives_string = []
-        # for a in alternatives:
-            # alternatives_string.append(du.atribute_values_to_string(a,k,attribute_values))
-
         #check real objective value of all alternatives
-        # print(len(alternatives_string))
-        Y_tmp=calculate_objective_all(dex_model,attribute_values,alternatives,template,target,output_values,positive_target,run)
+        Y_tmp=calculate_objective_all(dex_model,alternatives,template,target,positive_target)
         
         alternatives = np.vstack((alternatives,best_pool))
         Y = np.concatenate((Y_tmp,Y))
@@ -366,16 +294,9 @@ def check_promising_alternatives(dex_model,model,alternatives,best_y,best_pool,t
     #check the real objective value of the neighbours
     if len(x_close)>0:
         x_close =  remove_duplicates(x_close,alternatives)
+        
         if len(x_close)>0:  
-            print(len(x_close))
-            # alternatives_string = []
-            # k = sorted(template_string.keys())
-
-            # for a in x_close:
-                # alternatives_string.append(du.atribute_values_to_string(a,k,attribute_values))
-
-            Y_tmp=calculate_objective_all(dex_model,attribute_values,x_close,template,target,output_values,positive_target,run)
-            
+            Y_tmp=calculate_objective_all(dex_model,x_close,template,target,positive_target)
             alternatives = np.vstack((alternatives,x_close))
             Y = np.concatenate((Y,Y_tmp))
             alternatives = alternatives[Y>=best_y]
@@ -388,12 +309,7 @@ def check_promising_alternatives(dex_model,model,alternatives,best_y,best_pool,t
 
 #returns min and max values for each attribute
 def generate_minMax_constrais(attribute_values):
-    # min_values = np.repeat(0,8)
-    # min_values = np.zeros((len(attribute_values)))
-    # max_values = []
-    # for av in attribute_values:
-    #     max_values.append(av-1)
-    # return min_values,np.array(max_values)
+    #TODO: make this dynamically in base of the feature ranges
     return np.repeat(0,8), np.repeat(10,8)
 
 def acquisition_random(X_candidates,attribute_values,template_string, top_n = 20):
@@ -414,9 +330,7 @@ def acquisition_random(X_candidates,attribute_values,template_string, top_n = 20
     return alternatives_string,alternatives_numeric,X_candidates
 
 
-def run_generator(model, dataset, feature_values, starting_alternative,initial_instance,output_values,target = 2, neighbours_max_degree=3,
-                  first_sample = 3,positive_target = True, local_path = "F:/DS/",save_results=True,run=0):
-    
+def run_generator(model, dataset, feature_values, initial_instance, target, neighbours_max_degree=3, first_sample = 3,positive_target = True):
     print("model:",model,'target:',target,'positive_target:',positive_target)
     
     #random instances for the bayesian model
@@ -445,20 +359,17 @@ def run_generator(model, dataset, feature_values, starting_alternative,initial_i
     # objective function, for now we work with this single number (single objective optimization)
     Y=calculate_objective_all(
         model,
-        feature_values,
         X,
         initial_instance,
         target,
-        output_values, #possible output values that the DSM (or other plugin model) can have
-        positive_target, 
-        run
+        positive_target
     )
     
     surrogate_model.fit(X,Y)
     known_alternatives = X.copy() #known_alternatives to avoid duplicates
 
     #for log
-    print('model:',model,'first_sample:',first_sample,'target:',target,'template:',starting_alternative,'positive_target:',positive_target)
+    print('model:',model,'first_sample:',first_sample,'target:',target,'template:',initial_instance,'positive_target:',positive_target)
 
     #oversample current best if it carries some information
     best_x = X[np.argmax(Y)]
@@ -482,9 +393,6 @@ def run_generator(model, dataset, feature_values, starting_alternative,initial_i
     i=0
     objective_zero = 0 #counter - number of epochs without objective improvement
     improvement_zero=0 #counter - number of epochs improvement being zero
-    secondary_counter=0 #counter - number of checks of the secondary pool
-    pool_num = []
-    pool_string = []
     
     # estimation of the objective function
     EST_epoch_mean = []
@@ -524,12 +432,9 @@ def run_generator(model, dataset, feature_values, starting_alternative,initial_i
             print('neighbours to be checked:',len(best_x_close))
             #obtain top 10 of the neighbours (based on the acquisition function)
             x_num_arr,_ = opt_acquisition(
-                X, #possible counterfactuals with known objective value
-                Y, #objective value for X
                 surrogate_model, #the bayesian model that is used
+                X, #possible counterfactuals with known objective value
                 np.array(best_x_close), #neighbouring instances close to the current best
-                feature_values, #possible feature values for each feature field (DEX related)
-                initial_instance  #string representation of initial instance
             )
             print('predicting...')
             #logging purposes on the prediction
@@ -541,12 +446,12 @@ def run_generator(model, dataset, feature_values, starting_alternative,initial_i
             if len(random_alternatives)<10:
                 # how many features we allow to change
                 num_changes=changes_jitter+current_num_changes
-                random_alternatives = generate_min_max_alternatives_from_template_2(random_sample_size,known_alternatives,initial_instance,num_changes,positive_target,
+                random_alternatives = generate_min_max_alternatives_from_template(random_sample_size,known_alternatives,initial_instance,num_changes,positive_target,
                                                                                    min_values,max_values) 
                 #number of unique generated instances
                 random_alternatives_inital_size = random_alternatives.shape[0]
             if len(random_alternatives)>0:
-                x_num_arr,random_alternatives = opt_acquisition(X, Y, surrogate_model,random_alternatives,feature_values,initial_instance)
+                x_num_arr,random_alternatives = opt_acquisition(surrogate_model, X,random_alternatives)
                 print('predicting...')
                 #logging purposes on the prediction
                 est_arr = surrogate_model.predict(x_num_arr)
@@ -554,7 +459,7 @@ def run_generator(model, dataset, feature_values, starting_alternative,initial_i
         if len(x_num_arr)!=0:
             print('calculating objective...')
             actual_arr = []
-            actual_arr = calculate_objective_all(model,feature_values,x_num_arr,initial_instance,target,output_values,positive_target,run)
+            actual_arr = calculate_objective_all(model,x_num_arr,initial_instance,target,positive_target)
 
             #for log - save average estimated and real objective values 
             if len(est_arr)>10:
@@ -630,38 +535,18 @@ def run_generator(model, dataset, feature_values, starting_alternative,initial_i
         # LAST ITERATION
         # update the model
         if len(x_num_arr)==0 or ((new_max_epoch>=new_max_epoch_threshold or i==num_epochs) and i>min_epoch_threshold):
-    
             print("Best alternative:",i,current_best_Y)
-            # adaptation for getting DEX on numeric and textual representation
-            # m = X[np.argmax(Y)]
-            # k = sorted(initial_instance.keys())
-            # ms = du.atribute_values_to_string(m,k,feature_values)
-
+            
             threshold = .9
             promising_alternatives_pool.extend(best_alternatives_pool)
             # final check on the last iteration, with the wiser surrogate model.
-            final_alternatives,final_y = check_promising_alternatives(model,surrogate_model,
+            final_alternatives, _ = check_promising_alternatives(model,surrogate_model,
                     promising_alternatives_pool,current_best_Y,best_alternatives_pool,
-                    threshold,initial_instance,initial_instance,
-                    feature_values,target,output_values,
-                    positive_target,run)
+                    threshold,initial_instance,target,
+                    positive_target)
 
             BEST_alternatives_pool_arr.append(len(final_alternatives))
             stoh_duration =  time.time() - stoh_start_time
-            
-
-            # print("stochastic",stoh_duration,calculate_objective_all(model,feature_values,[ms],initial_instance,target,output_values,positive_target))
-            # print("template",calculate_objective_all(model,feature_values,[initial_instance],initial_instance,target,output_values,positive_target))
-            path = local_path+"ML_Models/"+type(model).__name__+"_"+str(target)+"_"+str(int(positive_target))+"_"+starting_alternative+"_RF.pickle"
-            if (save_results):
-                print('Saving ML model to ',path)
-                pickle.dump(surrogate_model, open(path, 'wb'))
-                print('Done')
-
-                path = local_path+"Alternatives/"+model+"_"+str(target)+"_"+str(int(positive_target))+"_"+starting_alternative+"_alternatives.pickle"
-                print('Saving alternatives to ',path)
-                pickle.dump([known_alternatives, promising_alternatives_pool,final_alternatives], open(path, 'wb'))
-                print('Done')
   
             break
         #check if we need to create new alternatives
