@@ -36,5 +36,6 @@ template_numeric,final_alternatives,BEST_alternatives_pool_arr,stoh_duration,Y_e
     positive_target = True, #boolean flag on which direction to search the target (positive, negative)
 )
 
+print("initial instance {}".format(initial_instance))
 output = model.predict(final_alternatives)
 print("for alternatives: {}, we have {}".format(final_alternatives, output))

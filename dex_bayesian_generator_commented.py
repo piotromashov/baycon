@@ -3,45 +3,9 @@ from sklearn.ensemble import RandomForestRegressor
 import pandas as pd
 import acquisition_functions as acq_functions
 import warnings
+import numpy_utils as npu
 warnings.filterwarnings("ignore")
 import time
-import dex_python_utilities as du
-import python_utilities as utils
-
-
-#distance metrics between two laternatives and a given target direction (positive or negative)
-def distance(alternative,template,positive_target):
-    if positive_target:
-        dist = alternative-template
-        dist[dist<0]=0
-    else:
-        dist =template-alternative
-        dist[dist<0]=0
-    return sum(dist)
-
-#same as distance() applied over an array of alternatives
-def distance_arr(alternative,template,positive_target):
-    if positive_target:
-        dist = alternative-template
-        dist[dist<0]=0
-    else:
-        dist =template-alternative
-        dist[dist<0]=0
-    return np.sum(dist,axis=1)
-
-#counts number of attribites that have lower (or higher for negative target) values than template
-def difference_arr(alternative,template,positive_target):
-    if positive_target:
-        diff = alternative<template
-    else:
-        diff =template>alternative
-    return np.sum(diff,axis=1)
-    
-#returns positions of attributes with differnet values than the template_numeric
-def find_changes(alternative,template_numeric,positive_target):
-    if positive_target:
-        return np.argwhere(alternative>template_numeric)
-    return np.argwhere(alternative<template_numeric)
 
 #generates random alternatives for a given template
 def generate_min_max_alternatives_from_template(n,known_alternatives,template,num_changes,
@@ -79,7 +43,7 @@ def generate_min_max_alternatives_from_template(n,known_alternatives,template,nu
     samples=samples[np.sum(samples!=template,axis=1)>0] 
 
     #remove samples that have more changes than max_num_changes ot less cnhanges than min_change
-    d = distance_arr(samples,template,improvement)
+    d = npu.distance_arr(samples,template,improvement)
     samples=samples[(d<=num_changes) & (d>=min_change)]
     
     #remove samples that already exist in known_alternatives
@@ -106,22 +70,22 @@ def update_random_alternatives(random_sample_size,known_alternatives,template_nu
 #calculate objective fuction for a list aletrnatives
 def calculate_objective_all(model,alternatives,template_numeric,target,positive_target):
     #get model prediction on those values
-    evaluation_values = model.predict(alternatives)
-    evaluation_values = np.array(evaluation_values)
+    Y = model.predict(alternatives)
+    Y = np.array(Y)
 
     #TODO: what is this 2 multiplying?
     overall_num_changes = 2*len(template_numeric)
 
     # here should go the cost of attribute changes and their weights
-    num_changes = distance_arr(alternatives, template_numeric, positive_target)
+    num_changes = npu.distance_arr(alternatives, template_numeric, positive_target)
 
     # closeness to feature space of the potential counterfactual to the initial instance.
     relative_similarity = 1-num_changes/overall_num_changes
 
     # check if we are moving towards the target or not.
     #if we are not moving towards the target, this is weighted as 0
-    target_eval = evaluation_values>=target if positive_target else evaluation_values<=target
-    objective_value = relative_similarity*target_eval    
+    target_achieved = Y==target
+    objective_value = relative_similarity*target_achieved    
     return objective_value
 
 #returns mean values and standard deviation calculated over the predictions
@@ -173,14 +137,6 @@ def opt_acquisition(model, X, X_candidates, top_n = 10):
         
     return alternatives,X_candidates
 
-
-#updates columns at index indx with the given values val from a given matrix A, updates eac
-#can be optimized. e.g., to avoid geenrating duplicates
-def update_per_row(A, indx, val,num_elem=1):
-    all_indx = indx[:,None] + np.arange(num_elem)
-    A[np.arange(all_indx.shape[0])[:,None], all_indx] =val
-    return A
-
 #recoursive function
 #probably can be optimized
 #generates neighbours (i.e., similar solutions with same or samlled distance values than a given alternative x
@@ -190,7 +146,7 @@ def update_per_row(A, indx, val,num_elem=1):
 #max_degree=2 (x's neighbours and neighbours of x's neighbours)
 #max_degree=3 (x's neighbours, neighbours of x's neighbours, and neighbours of the neighbours of x's neighbours)
 def generate_neighbours(x,template,positive_target,current_degree=1,x_close=[],max_degree=2):
-    idx_arr = find_changes(x,template,positive_target)
+    idx_arr = npu.find_changes(x,template,positive_target)
     while current_degree<max_degree and len(idx_arr)!=0 and len(x_close)<5000:
         current_degree = current_degree+1
         for position in idx_arr:
@@ -209,7 +165,7 @@ def generate_neighbours(x,template,positive_target,current_degree=1,x_close=[],m
                 values = tmp_x[idx_arr_neg]-1
             if len(idx_arr_neg)>0:
                 tmp_arr = np.repeat([tmp_x],len(idx_arr_neg),axis=0)
-                tmp_arr =update_per_row(tmp_arr,idx_arr_neg.flatten(),values)
+                tmp_arr =npu.update_per_row(tmp_arr,idx_arr_neg.flatten(),values)
                 x_close.extend(tmp_arr)
             
             generate_neighbours(tmp_x,template,positive_target,
@@ -285,7 +241,7 @@ def check_promising_alternatives(dex_model,model,alternatives,best_y,best_pool,t
                 values = tmp_x[idx_arr_neg]-1
             if len(idx_arr_neg)>0:
                 tmp_arr = np.repeat([tmp_x],len(idx_arr_neg),axis=0)
-                tmp_arr =update_per_row(tmp_arr,idx_arr_neg.flatten(),values)
+                tmp_arr =npu.update_per_row(tmp_arr,idx_arr_neg.flatten(),values)
                 x_close.extend(tmp_arr)
         # get the last iteration discovered neighbours
         alternatives_tmp = x_close[len_before:]
@@ -312,24 +268,6 @@ def generate_minMax_constrais(attribute_values):
     #TODO: make this dynamically in base of the feature ranges
     return np.repeat(0,8), np.repeat(10,8)
 
-def acquisition_random(X_candidates,attribute_values,template_string, top_n = 20):
-    
-    rand_idx =np.random.randint(0,len(X_candidates),top_n) #get_random_cadidates
-    rand_alternative_numeric =  X_candidates[rand_idx]
-    
-    #remove candidates from the random candidates, as they will be available in X
-    X_candidates = np.delete(X_candidates,rand_idx,axis=0)
-
-    #join top-n candidates and n random cadindates and calculate their string representations
-    alternatives_numeric = rand_alternative_numeric
-    alternatives_string = []
-    k = sorted(template_string.keys())
-    for a in alternatives_numeric:
-        alternatives_string.append(du.atribute_values_to_string(a,k,attribute_values))
-        
-    return alternatives_string,alternatives_numeric,X_candidates
-
-
 def run_generator(model, dataset, feature_values, initial_instance, target, neighbours_max_degree=3, first_sample = 3,positive_target = True):
     print("model:",model,'target:',target,'positive_target:',positive_target)
     
@@ -354,7 +292,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
     
     #Generate starting dataset and train the surrogate_model
     # string representation of the initial instances.
-    X = utils.generate_random_alternatives(dataset, n = 10) 
+    X = npu.generate_random_alternatives(dataset, n = 10) 
 
     # objective function, for now we work with this single number (single objective optimization)
     Y=calculate_objective_all(
@@ -388,7 +326,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
         best_x = current_best[0]                
         best_x_close = generate_neighbours(best_x,initial_instance,positive_target,1,[],neighbours_max_degree)
 
-    current_num_changes = distance(np.array(best_x),np.array(initial_instance),positive_target)-1
+    current_num_changes = npu.distance(np.array(best_x),np.array(initial_instance),positive_target)-1
     
     i=0
     objective_zero = 0 #counter - number of epochs without objective improvement
@@ -557,7 +495,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
           #max_mutation_rate_NOT_reached_bool = mutation_rate<max_mutation_rate
             
         #distance in the feature space from initial instance and the optimum solution
-        num_changes = distance(np.array(best_x),np.array(initial_instance),positive_target)-1
+        num_changes = npu.distance(np.array(best_x),np.array(initial_instance),positive_target)-1
         changes_improvement_bool = current_num_changes>num_changes
         
         #check if we need to update the pool of random alternatives because we run out of neighbours and
