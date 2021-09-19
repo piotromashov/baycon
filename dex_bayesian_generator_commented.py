@@ -6,6 +6,7 @@ import warnings
 import numpy_utils as npu
 warnings.filterwarnings("ignore")
 import time
+from InstancesGenerator import InstancesGenerator
 
 #generates random alternatives for a given template
 def generate_min_max_alternatives_from_template(n,known_alternatives,template,num_changes,
@@ -355,6 +356,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
     new_max_epoch = 0    
     
     min_values, max_values = generate_minMax_constrais(feature_values)
+    generator = InstancesGenerator(initial_instance, min_values, max_values)
     
     while i < num_epochs:
         print('----')
@@ -366,8 +368,8 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
         new_max_epoch = new_max_epoch+1
         
         #check if we have close neighbours to be checked
+        print('neighbours to be checked:',len(best_x_close))
         if len(best_x_close)>0:
-            print('neighbours to be checked:',len(best_x_close))
             #obtain top 10 of the neighbours (based on the acquisition function)
             x_num_arr,_ = opt_acquisition(
                 surrogate_model, #the bayesian model that is used
@@ -384,8 +386,9 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
             if len(random_alternatives)<10:
                 # how many features we allow to change
                 num_changes=changes_jitter+current_num_changes
-                random_alternatives = generate_min_max_alternatives_from_template(random_sample_size,known_alternatives,initial_instance,num_changes,positive_target,
-                                                                                   min_values,max_values) 
+                random_alternatives = generator.getRandom(random_sample_size, num_changes, positive_target)
+                random_alternatives = generator.update(known_alternatives, random_alternatives)
+                
                 #number of unique generated instances
                 random_alternatives_inital_size = random_alternatives.shape[0]
             if len(random_alternatives)>0:
@@ -505,8 +508,10 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
         if len(best_x_close)==0 and (changes_improvement_bool or objective_zero_bool or objective_improvement_bool):
             current_num_changes = num_changes
             num_changes=changes_jitter+current_num_changes
-            random_alternatives = update_random_alternatives(random_sample_size,known_alternatives,initial_instance,num_changes,positive_target,
-                                                            min_values,max_values)
+ 
+            random_alternatives = generator.getRandom(random_sample_size, num_changes, positive_target)
+            random_alternatives = generator.update(known_alternatives, random_alternatives)
+
             random_alternatives_inital_size = random_alternatives.shape[0]
             objective_zero=0
             improvement_zero = 0    
