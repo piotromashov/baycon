@@ -44,15 +44,51 @@ class InstancesGenerator:
         d = npu.distance_arr(instances,self._template,improvement)
         return instances[(d<=num_changes) & (d>=min_change)]
 
-    def getNeighbours():
-        pass
+    #recoursive function
+    #probably can be optimized
+    #generates neighbours (i.e., similar solutions with same or samlled distance values than a given alternative x
+    #with respect to a templace
+    #max_degree tells hown many times the function will be called
+    #max_degree=1 (only x's neighbours)
+    #max_degree=2 (x's neighbours and neighbours of x's neighbours)
+    #max_degree=3 (x's neighbours, neighbours of x's neighbours, and neighbours of the neighbours of x's neighbours)
+    def generate_neighbours(self, x,positive_target,current_degree=1,x_close=[],max_degree=2):
+        idx_arr = npu.find_changes(x,self._template,positive_target)
+        while current_degree<max_degree and len(idx_arr)!=0 and len(x_close)<5000:
+            current_degree = current_degree+1
+            for position in idx_arr:
+                tmp_x = x.copy()
+                if positive_target: #this update will dicrease the distance function
+                    tmp_x[position] = tmp_x[position]-1
+                else:
+                    tmp_x[position] = tmp_x[position]+1
+                x_close.append(tmp_x)
+                
+                if positive_target: #this update will not change the distance function
+                    idx_arr_neg  = np.argwhere(tmp_x < self._template)
+                    values = tmp_x[idx_arr_neg]+1
+                else:
+                    idx_arr_neg  = np.argwhere(tmp_x> self._template)
+                    values = tmp_x[idx_arr_neg]-1
+                if len(idx_arr_neg)>0:
+                    tmp_arr = np.repeat([tmp_x],len(idx_arr_neg),axis=0)
+                    tmp_arr =npu.update_per_row(tmp_arr,idx_arr_neg.flatten(),values)
+                    x_close.extend(tmp_arr)
+                
+                self.generate_neighbours(tmp_x, positive_target, current_degree, x_close, max_degree) 
+        #remove duplicates
+        if len(x_close)>0:
+            if len(x_close)>1:
+                x_close = np.unique(x_close,axis=0)
+            return list(x_close)
+        return []
 
-    def update(self, known_instances, new_instances):
-        last_idx = len(known_instances)
-        instances = np.vstack((known_instances, new_instances))
-        _,idx_arr = np.unique(instances,axis=0,return_index=True)
-        idx_arr = idx_arr[idx_arr>last_idx]
-        instances = instances[idx_arr]
+def remove_duplicates(known_instances, new_instances):
+    last_idx = len(known_instances)
+    instances = np.vstack((known_instances, new_instances))
+    _,idx_arr = np.unique(instances,axis=0,return_index=True)
+    idx_arr = idx_arr[idx_arr>last_idx]
+    instances = instances[idx_arr]
 
-        print("Done. Instances size:",instances.shape)
-        return instances
+    return instances
+

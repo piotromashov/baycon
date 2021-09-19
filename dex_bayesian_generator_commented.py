@@ -6,67 +6,7 @@ import warnings
 import numpy_utils as npu
 warnings.filterwarnings("ignore")
 import time
-from InstancesGenerator import InstancesGenerator
-
-#generates random alternatives for a given template
-def generate_min_max_alternatives_from_template(n,known_alternatives,template,num_changes,
-                                                  improvement=True,min_values=[],max_values=[]): 
-    print("Generating alternatives from template.")
-    features_amount = len(template)
-    if num_changes>features_amount/2:
-        num_changes = num_changes//2
-        
-    min_change=1
-    if not num_changes:
-        num_changes=min_change
-    print("num_changes:",num_changes,'min_change:',min_change)
-
-    samples = np.random.rand(n,len(template)) #random matrix with n samples with values between 0 and 1
-    
-    #maximum and minimum allowed change for one attribute (e.g., from 0 to 3)
-    max_value = max(max_values) 
-    min_value = -max_value
-
-    random_matrix = np.random.randint(min_value,max_value,(n,features_amount))
-
-    samples = random_matrix+template #increase each row with the template (i.e., increase template values by zero,one or two)
-    
-    #remove values bigger than max value
-    while len(samples[samples>max_values])>0:
-        samples[samples>max_values] = samples[samples>max_values]-1
-    samples[samples<min_values]=0 
-
-    samples = samples.astype(int)
-    
-    #increase atrute values that have lower values thetemplate
-    
-    #remove samples that are same as the template
-    samples=samples[np.sum(samples!=template,axis=1)>0] 
-
-    #remove samples that have more changes than max_num_changes ot less cnhanges than min_change
-    d = npu.distance_arr(samples,template,improvement)
-    samples=samples[(d<=num_changes) & (d>=min_change)]
-    
-    #remove samples that already exist in known_alternatives
-    last_idx = len(known_alternatives)
-    samples = np.vstack((known_alternatives,samples))
-    _,idx_arr = np.unique(samples,axis=0,return_index=True)
-    idx_arr = idx_arr[idx_arr>last_idx]
-    samples = samples[idx_arr]
-
-    print("Done. Sample size:",samples.shape)
-    return samples
-
-def update_random_alternatives(random_sample_size,known_alternatives,template_numeric,num_changes,positive_target,min_values,max_values):
-    return generate_min_max_alternatives_from_template(
-        random_sample_size,
-        known_alternatives,
-        template_numeric,
-        num_changes,
-        positive_target,
-        min_values,
-        max_values
-    )
+from InstancesGenerator import *
 
 #calculate objective fuction for a list aletrnatives
 def calculate_objective_all(model,alternatives,template_numeric,target,positive_target):
@@ -138,55 +78,6 @@ def opt_acquisition(model, X, X_candidates, top_n = 10):
         
     return alternatives,X_candidates
 
-#recoursive function
-#probably can be optimized
-#generates neighbours (i.e., similar solutions with same or samlled distance values than a given alternative x
-#with respect to a templace
-#max_degree tells hown many times the function will be called
-#max_degree=1 (only x's neighbours)
-#max_degree=2 (x's neighbours and neighbours of x's neighbours)
-#max_degree=3 (x's neighbours, neighbours of x's neighbours, and neighbours of the neighbours of x's neighbours)
-def generate_neighbours(x,template,positive_target,current_degree=1,x_close=[],max_degree=2):
-    idx_arr = npu.find_changes(x,template,positive_target)
-    while current_degree<max_degree and len(idx_arr)!=0 and len(x_close)<5000:
-        current_degree = current_degree+1
-        for position in idx_arr:
-            tmp_x = x.copy()
-            if positive_target: #this update will dicrease the distance function
-                tmp_x[position] = tmp_x[position]-1
-            else:
-                tmp_x[position] = tmp_x[position]+1
-            x_close.append(tmp_x)
-            
-            if positive_target: #this update will not change the distance function
-                idx_arr_neg  = np.argwhere(tmp_x<template)
-                values = tmp_x[idx_arr_neg]+1
-            else:
-                idx_arr_neg  = np.argwhere(tmp_x>template)
-                values = tmp_x[idx_arr_neg]-1
-            if len(idx_arr_neg)>0:
-                tmp_arr = np.repeat([tmp_x],len(idx_arr_neg),axis=0)
-                tmp_arr =npu.update_per_row(tmp_arr,idx_arr_neg.flatten(),values)
-                x_close.extend(tmp_arr)
-            
-            generate_neighbours(tmp_x,template,positive_target,
-                                current_degree,x_close,max_degree) 
-    #remove duplicates
-    if len(x_close)>0:
-        if len(x_close)>1:
-            x_close = np.unique(x_close,axis=0)
-        return list(x_close)
-    return []
-        
-#removes from "samples" alternatives that already exist in known_alternatives 
-def remove_duplicates(samples,known_alternatives):
-    last_idx = len(known_alternatives)-1
-    samples = np.vstack((known_alternatives,samples))
-    _,idx_arr = np.unique(samples,axis=0,return_index=True) #remove duplicate samples
-    idx_arr = idx_arr[idx_arr>last_idx]
-    samples = samples[idx_arr]
-    return list(samples)
-
 #check promising_alternatives_pool 
 def check_promising_alternatives(dex_model,model,alternatives,best_y,best_pool,threshold,template,target,positive_target):
     print('checking promising_alternatives')
@@ -250,7 +141,7 @@ def check_promising_alternatives(dex_model,model,alternatives,best_y,best_pool,t
             break
     #check the real objective value of the neighbours
     if len(x_close)>0:
-        x_close =  remove_duplicates(x_close,alternatives)
+        x_close = list(remove_duplicates(alternatives, x_close))
         
         if len(x_close)>0:  
             Y_tmp=calculate_objective_all(dex_model,x_close,template,target,positive_target)
@@ -310,6 +201,9 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
     #for log
     print('model:',model,'first_sample:',first_sample,'target:',target,'template:',initial_instance,'positive_target:',positive_target)
 
+    min_values, max_values = generate_minMax_constrais(feature_values)
+    generator = InstancesGenerator(initial_instance, min_values, max_values)
+    
     #oversample current best if it carries some information
     best_x = X[np.argmax(Y)]
     best_x_close = []
@@ -325,7 +219,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
         
         #save best_x neighbours to be checked in the next iteration
         best_x = current_best[0]                
-        best_x_close = generate_neighbours(best_x,initial_instance,positive_target,1,[],neighbours_max_degree)
+        best_x_close = generator.generate_neighbours(best_x,positive_target,1,[],neighbours_max_degree)
 
     current_num_changes = npu.distance(np.array(best_x),np.array(initial_instance),positive_target)-1
     
@@ -355,8 +249,6 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
     promising_alternatives_pool.extend(best_x_close)
     new_max_epoch = 0    
     
-    min_values, max_values = generate_minMax_constrais(feature_values)
-    generator = InstancesGenerator(initial_instance, min_values, max_values)
     
     while i < num_epochs:
         print('----')
@@ -387,7 +279,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
                 # how many features we allow to change
                 num_changes=changes_jitter+current_num_changes
                 random_alternatives = generator.getRandom(random_sample_size, num_changes, positive_target)
-                random_alternatives = generator.update(known_alternatives, random_alternatives)
+                random_alternatives = remove_duplicates(known_alternatives, random_alternatives)
                 
                 #number of unique generated instances
                 random_alternatives_inital_size = random_alternatives.shape[0]
@@ -428,7 +320,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
 
                 # check if close to current best, then it's candidate to keep exploring
                 if actual>=(current_best_Y*neighborhood_jitter) and actual>0.01:
-                    best_x_close_tmp = generate_neighbours(x_sample,initial_instance,positive_target,1,[],neighbours_max_degree)
+                    best_x_close_tmp = generator.generate_neighbours(x_sample,positive_target,1,[],neighbours_max_degree)
                     best_x_close.extend(best_x_close_tmp)
 
                 if actual>=current_best_Y and actual>0.01: #new estimated optimum found
@@ -454,11 +346,13 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
                 X = np.vstack((X, x_sample))
 
             # retrain our bayesian model for improvement on new information.
+            print("training")
             surrogate_model.fit(X,Y)
+            print("training finish")
 
             
             if len(best_x_close)>0:
-                best_x_close= remove_duplicates(best_x_close,known_alternatives)
+                best_x_close= list(remove_duplicates(known_alternatives, best_x_close))
                 if i>3: #store promising_alternatives_pool after nth learning epoch
                     promising_alternatives_pool.extend(best_x_close)
             # alternatives to be check after the last iteration, because the Bayesian model may be wiser then.
@@ -510,7 +404,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
             num_changes=changes_jitter+current_num_changes
  
             random_alternatives = generator.getRandom(random_sample_size, num_changes, positive_target)
-            random_alternatives = generator.update(known_alternatives, random_alternatives)
+            random_alternatives = remove_duplicates(known_alternatives, random_alternatives)
 
             random_alternatives_inital_size = random_alternatives.shape[0]
             objective_zero=0
