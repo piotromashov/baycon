@@ -45,6 +45,7 @@ class InstancesGenerator:
         return instances[(d<=num_changes) & (d>=min_change)]
 
     #recoursive function
+    #TODO: improve this function, remove positive distances
     #probably can be optimized
     #generates neighbours (i.e., similar solutions with same or samlled distance values than a given alternative x
     #with respect to a templace
