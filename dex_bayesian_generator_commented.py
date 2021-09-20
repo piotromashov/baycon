@@ -22,13 +22,6 @@ def get_ensemble_scores(ens_model,X):
     std = ens_predictions.std(axis=0)
     return mu, std
 
-#returns an array of predictions from each separate model in a given ensemble model
-def get_ensemble_predictions(ens_model,X):
-    ens_predictions = []
-    for est in range(len(ens_model.estimators_)): 
-        ens_predictions.append(ens_model.estimators_[est].predict(X))
-    return np.array(ens_predictions)
-
 # returns scores caclulated with an acquisition function (see acqusition_functions.py)
 def acquisition(model, X, X_candidates):
     mu, _ = get_ensemble_scores(model,X)
@@ -37,7 +30,7 @@ def acquisition(model, X, X_candidates):
     score = acq_functions.EI(mu, std, best_mu, epsilon=.001)
     return score
 
-# optimize the acquisition function
+# select top_n alternatives based on the acquisition function
 def opt_acquisition(model, X, X_candidates, top_n = 10):
     # calculate the acquisition function for each candidate
     scores = acquisition(model, X, X_candidates)
@@ -105,7 +98,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
     #oversample current best if it carries some information
     best_x = X[np.argmax(Y)]
     best_x_close = []
-    best_x_close_string = []
+
     best_Y = max(Y)
     if best_Y>0:
         current_best = X[np.argmax(Y)]

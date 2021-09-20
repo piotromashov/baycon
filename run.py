@@ -2,6 +2,7 @@ import dex_bayesian_generator_commented as bag_dsm
 from sklearn.datasets import fetch_openml
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import KBinsDiscretizer
+from numpy_utils import distance
 
 # possible target values that the plugin model can have
 output_values= ['tested_negative', 'tested_positive']
@@ -39,3 +40,7 @@ template_numeric,final_alternatives,BEST_alternatives_pool_arr,stoh_duration,Y_e
 print("initial instance {}".format(initial_instance))
 output = model.predict(final_alternatives)
 print("for alternatives: {}, we have {}".format(final_alternatives, output))
+
+for counterfactual in final_alternatives:
+    distance = distance(counterfactual, initial_instance, True)
+    print("distance between initial instance and CF:{}, is: {}", counterfactual, distance)
