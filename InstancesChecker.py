@@ -11,6 +11,9 @@ class InstancesChecker:
     def train_surrogate(self, X, Y):
         self._surrogate_model.fit(X,Y)
 
+    def surrogate(self):
+        return self._surrogate_model
+
     #check promising_alternatives_pool 
     def check_promising_alternatives(self, alternatives,best_y,best_pool,threshold,target,positive_target):
         print('checking promising_alternatives')
@@ -24,18 +27,15 @@ class InstancesChecker:
             else:
                 pred = self._surrogate_model.predict(alternatives)
             alternatives = np.array(alternatives)
-            print(alternatives.shape)
 
             #get n-top ranked alternatives
     
             alternatives = alternatives[pred>=best_y*threshold]
             pred = pred[pred>=best_y*threshold]
-            print(alternatives.shape)
             if len(alternatives)>top_n:
                 ix = np.argpartition(pred, -top_n)[-top_n:] #get top_n candidates
                 alternatives= alternatives[ix]
 
-        print(alternatives.shape)
         Y = np.repeat(best_y,len(best_pool))
         #for each top-ranked alternative
         #check real objective value of the alternative and its neighbours
@@ -50,7 +50,6 @@ class InstancesChecker:
 
         alternatives =  alternatives[[Y>=best_y]]
         Y = Y[[Y>=best_y]]
-        print('candidates best_y',len(Y),alternatives.shape)
 
         #generate neighbours
         x_close = []
@@ -83,8 +82,6 @@ class InstancesChecker:
                 alternatives = alternatives[Y>=best_y]
                 Y = Y[Y>=best_y]
         alternatives = np.unique(alternatives,axis=0)
-        print("unique Y:",alternatives.shape)
-        print('best_y',len(Y))
         return alternatives,Y
 
         #calculate objective fuction for a list aletrnatives
@@ -97,7 +94,7 @@ class InstancesChecker:
         overall_num_changes = 2*len(self._initial_instance)
 
         # here should go the cost of attribute changes and their weights
-        num_changes = npu.distance_arr(alternatives, self._initial_instance, positive_target)
+        num_changes = npu.distance_arr(alternatives, self._initial_instance)
 
         # closeness to feature space of the potential counterfactual to the initial instance.
         relative_similarity = 1-num_changes/overall_num_changes

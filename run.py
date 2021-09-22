@@ -37,10 +37,9 @@ template_numeric,final_alternatives,BEST_alternatives_pool_arr,stoh_duration,Y_e
     positive_target = True, #boolean flag on which direction to search the target (positive, negative)
 )
 
-print("initial instance {}".format(initial_instance))
-output = model.predict(final_alternatives)
-print("for alternatives: {}, we have {}".format(final_alternatives, output))
+print("initial instance: {}, output: {}".format(initial_instance, model.predict([initial_instance])))
+outputs = model.predict(final_alternatives)
 
-for counterfactual in final_alternatives:
-    distance = distance(counterfactual, initial_instance, True)
-    print("distance between initial instance and CF:{}, is: {}", counterfactual, distance)
+for counterfactual, output in zip(final_alternatives, outputs):
+    distance = distance(counterfactual, initial_instance)
+    print("CF instance: {}, output: {}, distance: {}".format(counterfactual, output, distance))

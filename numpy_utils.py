@@ -6,30 +6,21 @@ def generate_random_alternatives(dataset, n):
     return dataset[len(dataset)-(n+1):]
 
 #distance metrics between two laternatives and a given target direction (positive or negative)
-def distance(alternative,template,positive_target):
-    if positive_target:
-        dist = alternative-template
-        dist[dist<0]=0
-    else:
-        dist =template-alternative
-        dist[dist<0]=0
-    return sum(dist)
+def distance(alternative,template):
+    distance = np.abs(alternative-template)
+    return sum(distance)
 
 #same as distance() applied over an array of alternatives
-def distance_arr(alternative,template,positive_target):
-    if positive_target:
-        dist = alternative-template
-        dist[dist<0]=0
-    else:
-        dist =template-alternative
-        dist[dist<0]=0
-    return np.sum(dist,axis=1)
+def distance_arr(alternatives,template):
+    distance = np.abs(alternatives-template)
+    return np.sum(distance, axis=1)
 
 #returns positions of attributes with differnet values than the template_numeric
-def find_changes(alternative,template_numeric,positive_target):
-    if positive_target:
-        return np.argwhere(alternative>template_numeric)
-    return np.argwhere(alternative<template_numeric)
+#TODO: return indexes where we can improve distance, and their direction
+def find_changes(alternative,initial_instance):
+    indixes_positive = alternative<initial_instance
+    indixes_negative = alternative>initial_instance
+    return indixes_positive, indixes_negative
 
 #updates columns at index indx with the given values val from a given matrix A, updates eac
 #can be optimized. e.g., to avoid geenrating duplicates
