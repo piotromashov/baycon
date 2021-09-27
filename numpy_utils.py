@@ -5,7 +5,7 @@ def generate_random_alternatives(dataset, n):
     #getting the last n as "random"
     return dataset[len(dataset)-(n+1):]
 
-#distance metrics between two laternatives and a given target direction (positive or negative)
+#distance metrics between two samples
 def distance(alternative,template):
     distance = np.abs(alternative-template)
     return sum(distance)
@@ -28,3 +28,12 @@ def update_per_row(A, indx, val,num_elem=1):
     all_indx = indx[:,None] + np.arange(num_elem)
     A[np.arange(all_indx.shape[0])[:,None], all_indx] =val
     return A
+
+def not_repeated(known_instances, new_instances):
+    last_idx = len(known_instances)-1
+    instances = np.vstack((known_instances, new_instances))
+    _,idx_arr = np.unique(instances,axis=0,return_index=True)
+    idx_arr = idx_arr[idx_arr>last_idx]
+    instances = instances[idx_arr]
+
+    return instances

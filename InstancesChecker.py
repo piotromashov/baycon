@@ -1,6 +1,5 @@
 import numpy as np
 import numpy_utils as npu
-from InstancesGenerator import remove_duplicates
 
 class InstancesChecker:
     def __init__(self, objective_model, surrogate_model, initial_instance):
@@ -73,7 +72,7 @@ class InstancesChecker:
                 break
         #check the real objective value of the neighbours
         if len(x_close)>0:
-            x_close = list(remove_duplicates(alternatives, x_close))
+            x_close = list(npu.not_repeated(alternatives, x_close))
             
             if len(x_close)>0:  
                 Y_tmp=self.calculate_objective_all(x_close, target, positive_target)

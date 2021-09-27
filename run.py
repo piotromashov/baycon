@@ -2,10 +2,11 @@ import dex_bayesian_generator_commented as bag_dsm
 from sklearn.datasets import fetch_openml
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import KBinsDiscretizer
-from numpy_utils import distance
+import numpy_utils as npu
+from DataConstraints import DataConstraints
 
 # possible target values that the plugin model can have
-output_values= ['tested_negative', 'tested_positive']
+# output_values= ['tested_negative', 'tested_positive']
 
 dataset = fetch_openml(name='diabetes', version=1)
 
@@ -13,8 +14,10 @@ dataset = fetch_openml(name='diabetes', version=1)
 discretizer = KBinsDiscretizer(n_bins=10, encode="ordinal", strategy='uniform')
 discrete_dataset = discretizer.fit_transform(dataset.data)
 #get information about the possible values for the features
-feature_values = range(discretizer.n_bins)
+data_constraints = DataConstraints(discrete_dataset)
 
+# string representation of the initial instances.
+random_alternatives = npu.generate_random_alternatives(discrete_dataset, n = 10) 
 
 #generate starting alternatives and train the surrogate_model
 initial_instance= discrete_dataset[len(discrete_dataset)-1]
@@ -28,8 +31,8 @@ model.fit(discrete_dataset[0:-10], binary_target[0:-10])
 print('running BAG-DSM')
 template_numeric,final_alternatives,BEST_alternatives_pool_arr,stoh_duration,Y_epoch_mean,EST_epoch_mean = bag_dsm.run_generator(
     model, #DSM
-    discrete_dataset,
-    feature_values,
+    random_alternatives,
+    data_constraints,
     initial_instance, #string representation of initial instance
     target = 1, # goal we want the achieve
     neighbours_max_degree=3, # level of neighbours, level of features to be changed from promissing counterfactual candidates.
@@ -41,5 +44,5 @@ print("initial instance: {}, output: {}".format(initial_instance, model.predict(
 outputs = model.predict(final_alternatives)
 
 for counterfactual, output in zip(final_alternatives, outputs):
-    distance = distance(counterfactual, initial_instance)
+    distance = npu.distance(counterfactual, initial_instance)
     print("CF instance: {}, output: {}, distance: {}".format(counterfactual, output, distance))

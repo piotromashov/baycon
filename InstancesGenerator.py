@@ -3,10 +3,10 @@ import numpy as np
 from sklearn.utils.extmath import cartesian
 
 class InstancesGenerator:
-    def __init__(self, template, min_values, max_values):
+    def __init__(self, template, dataconstraints):
         self._template = template
-        self._min_values = min_values
-        self._max_values = max_values
+        self._min_values = dataconstraints.min_feature_values()
+        self._max_values = dataconstraints.max_feature_values()
 
     def getRandom(self, size, num_changes, improvement):
         features_amount = len(self._template)
@@ -42,7 +42,7 @@ class InstancesGenerator:
         #remove samples that have more changes than max_num_changes ot less cnhanges than min_change
         d = npu.distance_arr(instances, self._template)
         random_optimal_instances = instances[(d<=num_changes) & (d>=min_change)]
-        print("Generated random instances {}".format(random_optimal_instances.shape))
+        print("Generated random instances {}".format(random_optimal_instances.shape[0]))
         return random_optimal_instances
 
 
@@ -100,7 +100,9 @@ class InstancesGenerator:
         #create all combinations for each feature movement possible values
         instances = cartesian(features_movement_range)
         distances = npu.distance_arr(instances, origin_instance)
-        return instances[distances<=max_distance]
+        instances = instances[distances<=max_distance]
+        print("Generated neighbours instances: {}".format(instances.shape[0]))
+        return instances
 
     #recoursive function
     #TODO: improve this function, remove positive distances
@@ -141,13 +143,4 @@ class InstancesGenerator:
     #             x_close = np.unique(x_close,axis=0)
     #         return list(x_close)
     #     return []
-
-def remove_duplicates(known_instances, new_instances):
-    last_idx = len(known_instances)
-    instances = np.vstack((known_instances, new_instances))
-    _,idx_arr = np.unique(instances,axis=0,return_index=True)
-    idx_arr = idx_arr[idx_arr>last_idx]
-    instances = instances[idx_arr]
-
-    return instances
 

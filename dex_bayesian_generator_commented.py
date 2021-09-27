@@ -51,12 +51,7 @@ def opt_acquisition(model, X, X_candidates, top_n = 10):
         
     return alternatives,X_candidates
 
-#returns min and max values for each attribute
-def generate_minMax_constrais(attribute_values):
-    #TODO: make this dynamically in base of the feature ranges
-    return np.repeat(0,8), np.repeat(10,8)
-
-def run_generator(model, dataset, feature_values, initial_instance, target, neighbours_max_degree=3, first_sample = 3,positive_target = True):
+def run_generator(model, random_alternatives, dataconstraints, initial_instance, target, neighbours_max_degree=3, first_sample = 3,positive_target = True):
     print("model:",model,'target:',target,'positive_target:',positive_target)
     
     #random instances for the bayesian model
@@ -77,15 +72,13 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
     print()
     print('-----------')
     
-    #Generate starting dataset and train the surrogate_model
-    # string representation of the initial instances.
-    X = npu.generate_random_alternatives(dataset, n = 10) 
 
-    min_values, max_values = generate_minMax_constrais(feature_values)
-    generator = InstancesGenerator(initial_instance, min_values, max_values)
+    #Generate starting dataset and train the surrogate_model
+    generator = InstancesGenerator(initial_instance, dataconstraints)
     checker = InstancesChecker(model, RandomForestRegressor(1000,n_jobs=4), initial_instance)
 
     # objective function, for now we work with this single number (single objective optimization)
+    X = random_alternatives
     Y=checker.calculate_objective_all(X, target, positive_target)
     
     checker.train_surrogate(X,Y)
@@ -151,14 +144,14 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
         
         #check if we have close neighbours to be checked
         print('neighbours to be checked:',len(best_instance_neighbours))
-        if len(best_instance_neighbours)>0:
+        if len(best_instance_neighbours):
             #obtain top 10 of the neighbours (based on the acquisition function)
             top_instances,_ = opt_acquisition(
                 checker.surrogate(), #the bayesian model that is used
                 X, #possible counterfactuals with known objective value
                 np.array(best_instance_neighbours), #neighbouring instances close to the current best
             )
-            print('predicting...')
+            print('predicting neighbours...')
             estimated_values = checker.surrogate().predict(top_instances)
             best_instance_neighbours = []
         else:
@@ -167,11 +160,11 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
                 # how many features we allow to change
                 num_changes=changes_jitter+current_num_changes
                 random_alternatives = generator.getRandom(random_sample_size, num_changes, positive_target)
-                random_alternatives = remove_duplicates(known_alternatives, random_alternatives)
+                random_alternatives = npu.not_repeated(known_alternatives, random_alternatives)
                 
             if len(random_alternatives)>0:
                 top_instances,random_alternatives = opt_acquisition(checker.surrogate(), X,random_alternatives)
-                print('predicting...')
+                print('predicting random alternatives...')
                 estimated_values = checker.surrogate().predict(top_instances)
     
         if len(top_instances)!=0:
@@ -239,7 +232,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
 
             
             if len(best_instance_neighbours)>0:
-                best_instance_neighbours= list(remove_duplicates(known_alternatives, best_instance_neighbours))
+                best_instance_neighbours= list(npu.not_repeated(known_alternatives, best_instance_neighbours))
                 if i>3: #store promising_alternatives_pool after nth learning epoch
                     promising_alternatives_pool.extend(best_instance_neighbours)
             # alternatives to be check after the last iteration, because the Bayesian model may be wiser then.
@@ -291,7 +284,7 @@ def run_generator(model, dataset, feature_values, initial_instance, target, neig
             num_changes=changes_jitter+current_num_changes
  
             random_alternatives = generator.getRandom(random_sample_size, num_changes, positive_target)
-            random_alternatives = remove_duplicates(known_alternatives, random_alternatives)
+            random_alternatives = npu.not_repeated(known_alternatives, random_alternatives)
 
             objective_zero=0
             improvement_zero = 0    
