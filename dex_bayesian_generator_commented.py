@@ -51,53 +51,43 @@ def opt_acquisition(model, X, X_candidates, top_n = 10):
         
     return alternatives,X_candidates
 
-def run_generator(model, random_alternatives, dataconstraints, initial_instance, target, neighbours_max_degree=3, first_sample = 3,positive_target = True):
-    print("model:",model,'target:',target,'positive_target:',positive_target)
+def run_generator(model, random_alternatives, dataconstraints, initial_instance, target, neighbours_max_degree=3, first_sample = 3):    
+    #TODO: include logging library for log
+    print('-----Starting------')
+    print('model:',model,'first_sample:',first_sample,'target:',target,'template:',initial_instance)
     
-    #random instances for the bayesian model
-    random_sample_size=10000
-    #overall number of epochs to run the algorithm
-    num_epochs = 150 
-    # num_epochs = 80 
-    #generate new samples when the size is lower than x% of the initial size
-    random_sample_size_threshold = .1 
-    #generate new samples when the average objective values has not incrased for x epochs
-    objective_zero_threshold = 3
-    #improvement on amout of epochs to stop without having improvements.
-    improvement_zero_threshold = 50   
-    current_num_changes=0
+    #TODO: make it read from a config file
+    random_sample_size= 10000            #random instances for the bayesian model
+    num_epochs = 150                    #overall number of epochs to run the algorithm
+    objective_zero_threshold = 3        #generate new samples when the average objective values has not incrased for x epochs
+    improvement_zero_threshold = 50     #improvement on amout of epochs to stop without having improvements.
+    current_num_changes= 0
     new_max_epoch_threshold = 50
     min_epoch_threshold = 100
-                           
-    print()
-    print('-----------')
+    oversampling_weight = 10            #TODO should we keep oversampling?    
     
-
     #Generate starting dataset and train the surrogate_model
     generator = InstancesGenerator(initial_instance, dataconstraints)
     checker = InstancesChecker(model, RandomForestRegressor(1000,n_jobs=4), initial_instance)
 
     # objective function, for now we work with this single number (single objective optimization)
     X = random_alternatives
-    Y=checker.calculate_objective_all(X, target, positive_target)
+    Y=checker.calculate_objective_all(X, target)
     
     checker.train_surrogate(X,Y)
     known_alternatives = X.copy() #known_alternatives to avoid duplicates
-
-    #for log
-    print('model:',model,'first_sample:',first_sample,'target:',target,'template:',initial_instance,'positive_target:',positive_target)
     
-    #oversample current best if it carries some information
     best_instance = X[np.argmax(Y)]
     best_instance_neighbours = []
 
     best_Y = max(Y)
     if best_Y>0:
         current_best = X[np.argmax(Y)]
-        current_best = np.repeat([current_best],10,axis=0)
+        #oversample current best if it carries information
+        current_best = np.repeat([current_best],oversampling_weight,axis=0)
         X = np.vstack((X, current_best))
         tmp_Y = best_Y
-        tmp_Y = np.repeat(tmp_Y,10)
+        tmp_Y = np.repeat(tmp_Y,oversampling_weight)
         Y = np.concatenate((Y, tmp_Y))
         
         #save best_x neighbours to be checked in the next iteration
@@ -105,23 +95,20 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
         best_instance_neighbours = generator.generate_neighbours(best_instance, neighbours_max_degree)        
         # neighbour_instances = generator.generate_neighbours(best_instance,positive_target,1,[],neighbours_max_degree)
 
-    current_num_changes = npu.distance(np.array(best_instance),np.array(initial_instance))-1
+    current_num_changes = npu.distance(np.array(best_instance),np.array(initial_instance))
     
     i=0
     objective_zero = 0 #counter - number of epochs without objective improvement
     improvement_zero=0 #counter - number of epochs improvement being zero
     
-    # estimation of the objective function
-    EST_epoch_mean = []
-    # actual value of the objective function
-    Y_epoch_mean= []
-    BEST_alternatives_pool_arr = []
-    stoh_start_time = time.time()
+    # stoh_start_time = time.time()
+    # stoh_duration =  time.time() - stoh_start_time  #time to first solution
     random_alternatives = np.array([[1],[1]])
     
     # giving search space for the solutions we are finding
     neighborhood_jitter= .75
-    changes_jitter=8
+    
+    changes_jitter=8   #TODO: put 20% of feature size
     print('neighborhood_jitter',neighborhood_jitter)
     print('neighbours_max_degree',neighbours_max_degree)
     
@@ -131,7 +118,6 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
     promising_alternatives_pool = []
     promising_alternatives_pool.extend(best_instance_neighbours)
     new_max_epoch = 0    
-    
     
     while i < num_epochs:
         print('----')
@@ -158,8 +144,8 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
             #go with random counterfactuals
             if len(random_alternatives)<10:
                 # how many features we allow to change
-                num_changes=changes_jitter+current_num_changes
-                random_alternatives = generator.getRandom(random_sample_size, num_changes, positive_target)
+                num_changes=changes_jitter+(current_num_changes-1)
+                random_alternatives = generator.getRandom(random_sample_size, num_changes)
                 random_alternatives = npu.not_repeated(known_alternatives, random_alternatives)
                 
             if len(random_alternatives)>0:
@@ -170,15 +156,7 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
         if len(top_instances)!=0:
             print('calculating objective...')
             objective_values = []
-            objective_values = checker.calculate_objective_all(top_instances, target, positive_target)
-
-            #for log - save average estimated and real objective values 
-            if len(estimated_values)>10:
-                EST_epoch_mean.extend([np.mean(estimated_values[:10]),np.mean(estimated_values[10:])]) #first 5 are infromative samples second 5 are random samples
-                Y_epoch_mean.extend([np.mean(objective_values[:10]),np.mean(objective_values[10:])])
-            else:
-                EST_epoch_mean.extend([np.mean(estimated_values),-1]) #first 5 are infromative samples second 5 are random samples
-                Y_epoch_mean.extend([np.mean(objective_values),-1])
+            objective_values = checker.calculate_objective_all(top_instances, target)
 
             #add to known_alternatives
             known_alternatives = np.vstack([known_alternatives,top_instances])
@@ -195,8 +173,6 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
 
                 if objective_value>0.01:
                     objective_zero=0 #restart counter
-                   # improvement_weight = len(X)/10 #oversample improvement instance using improvement_weight
-                improvement_weight = 1
 
                 # check if close to current best, then it's candidate to keep exploring
                 if objective_value>=(best_Y*neighborhood_jitter) and objective_value>0.01:
@@ -208,16 +184,14 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
                     best_instance = instance
                     if objective_value>best_Y: #restart best alternatives
                         best_alternatives_pool=[]                            
-                        BEST_alternatives_pool_arr = list(np.repeat(0,len(BEST_alternatives_pool_arr)))
                     if list(best_instance) not in best_alternatives_pool:
                         best_alternatives_pool.append(list(best_instance))
                     new_max_epoch = 0
 
                     improvement_zero=1 #restart counter
                     
-                    # maybe this does not oversample? check.
-                    instance = np.repeat([instance],improvement_weight,axis=0) #oversample
-                    objective_value = np.repeat(objective_value,improvement_weight) #oversample
+                    instance = np.repeat([instance],oversampling_weight,axis=0) #oversample
+                    objective_value = np.repeat(objective_value,oversampling_weight) #oversample
                     Y = np.concatenate((Y, objective_value))
                     best_Y = objective_value[0]
                     #check if we need to decrease the mutation_rate
@@ -233,13 +207,13 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
             
             if len(best_instance_neighbours)>0:
                 best_instance_neighbours= list(npu.not_repeated(known_alternatives, best_instance_neighbours))
+                #start trusting the model on the promising alternatives after some experience.
                 if i>3: #store promising_alternatives_pool after nth learning epoch
                     promising_alternatives_pool.extend(best_instance_neighbours)
             # alternatives to be check after the last iteration, because the Bayesian model may be wiser then.
-            BEST_alternatives_pool_arr.append(len(best_alternatives_pool))
-            print("known alternatives size {}\nmax_epoch: {}, best neighbouring instances: {}, best alternatives pool: {}, promising alternatives: {}".format(
+            print("known alternatives size {}\nbest found in epoch: {}, best neighbouring instances: {}, best alternatives pool: {}, promising alternatives: {}".format(
                 known_alternatives.shape[0],
-                new_max_epoch,
+                i,
                 len(best_instance_neighbours),
                 len(best_alternatives_pool),
                 len(promising_alternatives_pool)
@@ -247,8 +221,10 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
 
         # LAST ITERATION
         # update the model
+        #TODO is it ok to be len(top_instances)==0 to check if its the last iteration?
         if len(top_instances)==0 or ((new_max_epoch>=new_max_epoch_threshold or i==num_epochs) and i>min_epoch_threshold):
-            print("Best alternative:",i,best_Y)
+            print("Last iteration, checking promising alternatives with wiser surrogate model...")
+            print("Best current alternative:",best_instance)
             
             threshold = .9
             promising_alternatives_pool.extend(best_alternatives_pool)
@@ -258,22 +234,16 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
                 best_Y,
                 best_alternatives_pool,
                 threshold,
-                target,
-                positive_target)
-
-            BEST_alternatives_pool_arr.append(len(final_alternatives))
-            stoh_duration =  time.time() - stoh_start_time
-  
+                target
+            )
             break
-        #check if we need to create new alternatives
-        # sample_too_small_bool = random_alternatives.shape[0]<random_alternatives_inital_size*random_sample_size_threshold
-        # sample_too_small_bool = sample_too_small_bool or random_alternatives.shape[0]<20
+
         objective_zero_bool = objective_zero_threshold<=objective_zero
         objective_improvement_bool = improvement_zero_threshold<=improvement_zero
             
         #distance in the feature space from initial instance and the optimum solution
-        num_changes = npu.distance(np.array(best_instance),np.array(initial_instance))-1
-        changes_improvement_bool = current_num_changes>num_changes
+        num_changes = npu.distance(np.array(best_instance),np.array(initial_instance))
+        changes_improvement_bool = current_num_changes>num_changes-1
         
         #check if we need to update the pool of random alternatives because we run out of neighbours and
         # the current pool is small OR
@@ -283,10 +253,10 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
             current_num_changes = num_changes
             num_changes=changes_jitter+current_num_changes
  
-            random_alternatives = generator.getRandom(random_sample_size, num_changes, positive_target)
+            random_alternatives = generator.getRandom(random_sample_size, num_changes)
             random_alternatives = npu.not_repeated(known_alternatives, random_alternatives)
 
             objective_zero=0
             improvement_zero = 0    
             
-    return initial_instance,final_alternatives,BEST_alternatives_pool_arr,stoh_duration,Y_epoch_mean,EST_epoch_mean
+    return final_alternatives, 0

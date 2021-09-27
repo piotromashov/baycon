@@ -8,7 +8,7 @@ class InstancesGenerator:
         self._min_values = dataconstraints.min_feature_values()
         self._max_values = dataconstraints.max_feature_values()
 
-    def getRandom(self, size, num_changes, improvement):
+    def getRandom(self, size, num_changes):
         features_amount = len(self._template)
         if num_changes>features_amount/2:
             num_changes = num_changes//2

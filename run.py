@@ -29,20 +29,19 @@ model.fit(discrete_dataset[0:-10], binary_target[0:-10])
 
 ##run BAG DSM
 print('running BAG-DSM')
-template_numeric,final_alternatives,BEST_alternatives_pool_arr,stoh_duration,Y_epoch_mean,EST_epoch_mean = bag_dsm.run_generator(
+counterfactuals, time_to_first_solution = bag_dsm.run_generator(
     model, #DSM
     random_alternatives,
     data_constraints,
     initial_instance, #string representation of initial instance
     target = 1, # goal we want the achieve
     neighbours_max_degree=3, # level of neighbours, level of features to be changed from promissing counterfactual candidates.
-    first_sample = 3, # amount of samples for each possible output
-    positive_target = True, #boolean flag on which direction to search the target (positive, negative)
+    first_sample = 3 # amount of samples for each possible output
 )
 
 print("initial instance: {}, output: {}".format(initial_instance, model.predict([initial_instance])))
-outputs = model.predict(final_alternatives)
+outputs = model.predict(counterfactuals)
 
-for counterfactual, output in zip(final_alternatives, outputs):
+for counterfactual, output in zip(counterfactuals, outputs):
     distance = npu.distance(counterfactual, initial_instance)
     print("CF instance: {}, output: {}, distance: {}".format(counterfactual, output, distance))

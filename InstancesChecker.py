@@ -14,7 +14,7 @@ class InstancesChecker:
         return self._surrogate_model
 
     #check promising_alternatives_pool 
-    def check_promising_alternatives(self, alternatives,best_y,best_pool,threshold,target,positive_target):
+    def check_promising_alternatives(self, alternatives,best_y,best_pool,threshold,target):
         print('checking promising_alternatives')
         top_n = 1000
         if len(alternatives)==0:
@@ -40,7 +40,7 @@ class InstancesChecker:
         #check real objective value of the alternative and its neighbours
         if len(alternatives)>0:
             #check real objective value of all alternatives
-            Y_tmp=self.calculate_objective_all(alternatives, target, positive_target)
+            Y_tmp=self.calculate_objective_all(alternatives, target)
             
             alternatives = np.vstack((alternatives,best_pool))
             Y = np.concatenate((Y_tmp,Y))
@@ -56,7 +56,8 @@ class InstancesChecker:
         for i in range(10):
             len_before = len(x_close) 
             for tmp_x in alternatives_tmp:
-                if positive_target: #this updaee would not change the distance value between the template and the alternative
+                #TODO: change whole function to generate neighbours, here we had positive_target, which is no longer used
+                if True: #this updaee would not change the distance value between the template and the alternative
                     idx_arr_neg  = np.argwhere(tmp_x<self._initial_instance)
                     values = tmp_x[idx_arr_neg]+1
                 else:
@@ -75,7 +76,7 @@ class InstancesChecker:
             x_close = list(npu.not_repeated(alternatives, x_close))
             
             if len(x_close)>0:  
-                Y_tmp=self.calculate_objective_all(x_close, target, positive_target)
+                Y_tmp=self.calculate_objective_all(x_close, target)
                 alternatives = np.vstack((alternatives,x_close))
                 Y = np.concatenate((Y,Y_tmp))
                 alternatives = alternatives[Y>=best_y]
@@ -84,7 +85,7 @@ class InstancesChecker:
         return alternatives,Y
 
         #calculate objective fuction for a list aletrnatives
-    def calculate_objective_all(self, alternatives, target, positive_target):
+    def calculate_objective_all(self, alternatives, target):
         #get model prediction on those values
         Y = self._objective_model.predict(alternatives)
         Y = np.array(Y)
