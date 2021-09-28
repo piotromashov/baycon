@@ -56,6 +56,7 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
     print('model:',model,'first_sample:',first_sample,'target:',target,'template:',initial_instance)
     
     #TODO: make it read from a config file
+    ## --- CONFIG ---
     random_sample_size= 10000            #random instances for the bayesian model
     num_epochs = 150                    #overall number of epochs to run the algorithm
     objective_zero_threshold = 3        #generate new samples when the average objective values has not incrased for x epochs
@@ -65,62 +66,47 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
     min_epoch_threshold = 100
     oversampling_weight = 10            #TODO should we keep oversampling?
     neighbours_max_degree = 3
-    
-    #Generate starting dataset and train the surrogate_model
-    generator = InstancesGenerator(initial_instance, dataconstraints, neighbours_max_degree)
-    checker = InstancesChecker(model, RandomForestRegressor(1000,n_jobs=4), initial_instance, dataconstraints)
+    neighborhood_jitter= .75            # giving search space for the solutions we are finding
+    changes_jitter = 8                  #TODO: put 20% of feature size
+    # --- END CONFIG ---
 
-    # objective function, for now we work with this single number (single objective optimization)
-    X = random_alternatives
-    Y=checker.calculate_objective_all(X, target)
-    
-    checker.train_surrogate(X,Y)
-    known_alternatives = X.copy() #known_alternatives to avoid duplicates
-    
-    best_instance = X[np.argmax(Y)]
-    best_instance_neighbours = []
-
-    best_Y = max(Y)
-    if best_Y>0:
-        current_best = X[np.argmax(Y)]
-        #oversample current best if it carries information
-        current_best = np.repeat([current_best],oversampling_weight,axis=0)
-        X = np.vstack((X, current_best))
-        tmp_Y = best_Y
-        tmp_Y = np.repeat(tmp_Y,oversampling_weight)
-        Y = np.concatenate((Y, tmp_Y))
-        
-        #save best_x neighbours to be checked in the next iteration
-        best_instance = current_best[0]
-        best_instance_neighbours = generator.generate_neighbours(best_instance, known_alternatives)        
-        # neighbour_instances = generator.generate_neighbours(best_instance,positive_target,1,[],neighbours_max_degree)
-
-    current_num_changes = npu.distance(np.array(best_instance),np.array(initial_instance))
-    
+    # -- COUNTERS ---
     epoch = 0
     objective_zero = 0 #counter - number of epochs without objective improvement
     improvement_zero = 0 #counter - number of epochs improvement being zero
     epoch_without_improvement = 0
     epoch_max_found = 0
+    # --- END COUNTERS ---
+    
+    surrogate_model = RandomForestRegressor(1000,n_jobs=4)
+    checker = InstancesChecker(model, surrogate_model, initial_instance, dataconstraints)
+    generator = InstancesGenerator(initial_instance, dataconstraints, neighbours_max_degree)
+
+    X = random_alternatives
+    Y = checker.calculate_objective_all(X, target)
+    checker.train_surrogate(X,Y)
+
+    best_instance_neighbours = []
+    best_instances_pool = []
+    promising_alternatives_pool = []
+
+    all_counterfactuals = X[Y==target]
+    known_alternatives = X.copy() #known_alternatives to avoid duplicates
+    best_instance = X[np.argmax(Y)]
+    best_instance_output = max(Y)
+
+    if best_instance_output>0:
+        X = np.vstack((X, np.repeat([best_instance], oversampling_weight, axis=0)))
+        Y = np.concatenate((Y, np.repeat(best_instance_output, oversampling_weight)))
+        
+        best_instances_pool.append(list(best_instance))
+        best_instance_neighbours = generator.generate_neighbours(best_instance, known_alternatives)        
+
+    current_num_changes = npu.distance(np.array(best_instance),np.array(initial_instance))
     
     # stoh_start_time = time.time()
     # stoh_duration =  time.time() - stoh_start_time  #time to first solution
-    random_alternatives = np.array([[1],[1]])
-    
-    # giving search space for the solutions we are finding
-    neighborhood_jitter= .75
-    
-    changes_jitter = 8   #TODO: put 20% of feature size
-    print('neighborhood_jitter',neighborhood_jitter)
-    print('neighbours_max_degree',neighbours_max_degree)
-    
-    best_alternatives_pool = []
-    best_alternatives_pool.append(list(best_instance))
-    
-    promising_alternatives_pool = []
-    promising_alternatives_pool.extend(best_instance_neighbours)
-
-    all_counterfactuals = X[Y==target]
+    # random_alternatives = np.array([[1],[1]])
     
     while epoch < num_epochs:
         print('----')
@@ -178,26 +164,26 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
                     objective_zero=0 #restart counter
 
                 # check if close to current best, then it's candidate to keep exploring
-                if objective_value>=(best_Y*neighborhood_jitter) and objective_value>0.01:
+                if objective_value>=(best_instance_output*neighborhood_jitter) and objective_value>0.01:
                     # best_x_close_tmp = generator.generate_neighbours(instance,positive_target,1,[],neighbours_max_degree)
                     best_x_close_tmp = generator.generate_neighbours(instance, known_alternatives)
                     best_instance_neighbours.extend(best_x_close_tmp)
 
-                if objective_value>=best_Y and objective_value>0.01: #new estimated optimum found
+                if objective_value>=best_instance_output and objective_value>0.01: #new estimated optimum found
                     best_instance = instance
-                    if objective_value>best_Y: #restart best alternatives
-                        best_alternatives_pool=[]                            
-                    if list(best_instance) not in best_alternatives_pool:
-                        best_alternatives_pool.append(list(best_instance))
-                    epoch_without_improvement = 0
+                    best_instance_output = objective_value
+
+                    if objective_value>best_instance_output: #restart best alternatives
+                        best_instances_pool=[]                            
+                    if list(best_instance) not in best_instances_pool:
+                        best_instances_pool.append(list(best_instance))
+
                     epoch_max_found = epoch
-
-
+                    epoch_without_improvement = 0
                     improvement_zero=1 #restart counter
                     
                     instance = np.repeat([instance],oversampling_weight,axis=0) #oversample
                     objective_value = np.repeat(objective_value,oversampling_weight) #oversample
-                    best_Y = objective_value[0]
                     
                 Y = np.concatenate((Y, objective_value), axis=None)
                 X = np.vstack((X, instance))
@@ -217,7 +203,7 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
                 known_alternatives.shape[0],
                 epoch_max_found,
                 len(best_instance_neighbours),
-                len(best_alternatives_pool),
+                len(best_instances_pool),
                 len(promising_alternatives_pool)
             ))
 
@@ -228,12 +214,12 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
             print("Best current alternative:",best_instance)
             
             threshold = .9
-            promising_alternatives_pool.extend(best_alternatives_pool)
+            promising_alternatives_pool.extend(best_instances_pool)
             # final check on the last iteration, with the wiser surrogate model.
             final_alternatives, _ = checker.check_promising_alternatives(
                 promising_alternatives_pool,
-                best_Y,
-                best_alternatives_pool,
+                best_instance_output,
+                best_instances_pool,
                 threshold,
                 target
             )
