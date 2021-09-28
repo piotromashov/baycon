@@ -101,14 +101,13 @@ class InstancesChecker:
         Y = self._objective_model.predict(alternatives)
         Y = np.array(Y)
 
-        #TODO: is this a good measure of similarity?
-        overall_num_changes = self._dataconstraints.features_possibilities_all()
+        max_distance = self._dataconstraints.features_max_distance()
 
         # here should go the cost of attribute changes and their weights
-        num_changes = npu.distance_arr(alternatives, self._initial_instance)
+        instance_distance = npu.distance_arr(alternatives, self._initial_instance)
 
         # closeness to feature space of the potential counterfactual to the initial instance.
-        relative_similarity = 1-num_changes/overall_num_changes
+        relative_similarity = 1-instance_distance/max_distance
 
         # check if we are moving towards the target or not.
         #if we are not moving towards the target, this is weighted as 0

@@ -12,5 +12,5 @@ class DataConstraints:
     def max_feature_values(self):
         return self._max_values
 
-    def features_possibilities_all(self):
+    def features_max_distance(self):
         return np.sum((self._max_values-self._min_values)+1)
