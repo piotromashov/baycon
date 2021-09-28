@@ -35,5 +35,8 @@ def not_repeated(known_instances, new_instances):
     _,idx_arr = np.unique(instances,axis=0,return_index=True)
     idx_arr = idx_arr[idx_arr>last_idx]
     instances = instances[idx_arr]
-
     return instances
+
+def stack_not_repeated(known, new):
+    new_unique = not_repeated(known, new)
+    return np.vstack([known, new_unique])

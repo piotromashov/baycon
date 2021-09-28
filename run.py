@@ -35,7 +35,6 @@ counterfactuals, time_to_first_solution = bag_dsm.run_generator(
     data_constraints,
     initial_instance, #string representation of initial instance
     target = 1, # goal we want the achieve
-    neighbours_max_degree=3, # level of neighbours, level of features to be changed from promissing counterfactual candidates.
     first_sample = 3 # amount of samples for each possible output
 )
 

@@ -2,10 +2,11 @@ import numpy as np
 import numpy_utils as npu
 
 class InstancesChecker:
-    def __init__(self, objective_model, surrogate_model, initial_instance):
+    def __init__(self, objective_model, surrogate_model, initial_instance, dataconstraints):
         self._objective_model = objective_model
         self._surrogate_model = surrogate_model
         self._initial_instance = initial_instance
+        self._dataconstraints = dataconstraints
 
     def train_surrogate(self, X, Y):
         self._surrogate_model.fit(X,Y)
@@ -17,7 +18,7 @@ class InstancesChecker:
     def check_promising_alternatives(self, alternatives,best_y,best_pool,threshold,target):
         print('checking promising_alternatives')
         top_n = 1000
-        if len(alternatives)==0:
+        if not len(alternatives):
             alternatives = np.array(best_pool)[:top_n]
         else:
             #predict the optimization function with the surogate model
@@ -84,14 +85,24 @@ class InstancesChecker:
         alternatives = np.unique(alternatives,axis=0)
         return alternatives,Y
 
+    def promising_pool_check(self, alternatives, best_instances, best_output, target):
+        objective_values = self.calculate_objective_all(alternatives, target)
+        #update new best_output if objective_values has a greater one
+        #train surrogate model with new known outputs
+        #run acquisition function and get output sorted
+
+        #run generation of neighbours for each one of them
+
+        pass
+
         #calculate objective fuction for a list aletrnatives
     def calculate_objective_all(self, alternatives, target):
         #get model prediction on those values
         Y = self._objective_model.predict(alternatives)
         Y = np.array(Y)
 
-        #TODO: what is this 2 multiplying?
-        overall_num_changes = 2*len(self._initial_instance)
+        #TODO: is this a good measure of similarity?
+        overall_num_changes = self._dataconstraints.features_possibilities_all()
 
         # here should go the cost of attribute changes and their weights
         num_changes = npu.distance_arr(alternatives, self._initial_instance)
@@ -101,6 +112,6 @@ class InstancesChecker:
 
         # check if we are moving towards the target or not.
         #if we are not moving towards the target, this is weighted as 0
-        target_achieved = Y==target
-        objective_value = relative_similarity*target_achieved    
-        return objective_value
+        targets_achieved = Y==target
+        objective_values = relative_similarity*targets_achieved    
+        return objective_values
