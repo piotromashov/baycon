@@ -44,43 +44,14 @@ class InstancesGenerator:
         d = npu.distance_arr(instances, self._template)
         random_optimal_instances = instances[(d<=num_changes) & (d>=min_change)]
         random_optimal = npu.not_repeated(known_alternatives, random_optimal_instances)
-        print("Generated random instances {}".format(random_optimal.shape[0]))
         return random_optimal
 
-
-    # def neighbours_breadth_generation(self, origin_instance, breadth_exploration_degree = 3):
-    #     total_neighbourhood = origin_instance
-    #     #get first level of neighbourhood zone
-    #     neighbourhood_zone = [origin_instance]
-    #     for _ in range(breadth_exploration_degree):
-    #         #neighbours to explore, get previous explored zone
-    #         neighbours = neighbourhood_zone
-    #         #clean slate for new level of neighbourhood
-    #         neighbourhood_zone = [] 
-    #         for neighbour in neighbours:
-    #             # get closer instances to destination (aka neighbourhood zone)
-    #             neighbourhood_zone.extend(self.generate_closer_instances(neighbour))
-    #         #add new neighbourhood zone into total_neighbours
-    #         if neighbourhood_zone:
-    #             total_neighbourhood = np.vstack((total_neighbourhood, neighbourhood_zone))
-    #         #remove duplicates
-    #         total_neighbourhood = np.unique(total_neighbourhood,axis=0)
-
-    #         if len(total_neighbourhood)>5000:
-    #             break
-    #     # print("Generated neighbours: {}".format(len(total_neighbourhood)))
-    #     return total_neighbourhood
-            
-
-    # def generate_closer_instances(self, origin_instance):
-    #     closer_instances = []
-    #     for k, _ in enumerate(self._template):
-    #         if origin_instance[k]==self._template[k]:
-    #             continue
-    #         auxiliar_instance = origin_instance.copy()
-    #         auxiliar_instance[k] += 1 if origin_instance[k]<self._template[k] else -1
-    #         closer_instances.append(auxiliar_instance)
-    #     return closer_instances
+    def generate_neighbours_arr(self, origin_instances, known_alternatives):
+        total_neighbours = np.array([], dtype=np.int64).reshape(0, self._template.shape[0])
+        for origin_instance in origin_instances:
+            neighbours = self.generate_neighbours(origin_instance, known_alternatives)
+            total_neighbours = npu.unique_concatenate(total_neighbours,neighbours)
+        return total_neighbours
 
     def generate_neighbours(self, origin_instance, known_alternatives):
         # print("Generating neighbours for: {}, initial instance: {}".format(origin_instance, self._template))
@@ -104,46 +75,4 @@ class InstancesGenerator:
         distances = npu.distance_arr(neighbours, origin_instance)
         neighbours = neighbours[distances<=self._max_distance]
         unique_neighbours = npu.not_repeated(known_alternatives, neighbours)
-        print("Generated neighbours: {}".format(unique_neighbours.shape[0]))
         return unique_neighbours
-
-    #recoursive function
-    #TODO: improve this function, remove positive distances
-    #probably can be optimized
-    #generates neighbours (i.e., similar solutions with same or samlled distance values than a given alternative x
-    #with respect to a templace
-    #max_degree tells hown many times the function will be called
-    #max_degree=1 (only x's neighbours)
-    #max_degree=2 (x's neighbours and neighbours of x's neighbours)
-    #max_degree=3 (x's neighbours, neighbours of x's neighbours, and neighbours of the neighbours of x's neighbours)
-    # def generate_neighbours(self, x,positive_target,current_degree=1,x_close=[],max_degree=2):
-    #     idx_arr = npu.find_changes(x,self._template)
-    #     while current_degree<max_degree and len(idx_arr)!=0 and len(x_close)<5000:
-    #         current_degree = current_degree+1
-    #         for position in idx_arr:
-    #             tmp_x = x.copy()
-    #             if positive_target: #this update will dicrease the distance function
-    #                 tmp_x[position] = tmp_x[position]-1
-    #             else:
-    #                 tmp_x[position] = tmp_x[position]+1
-    #             x_close.append(tmp_x)
-                
-    #             if positive_target: #this update will not change the distance function
-    #                 idx_arr_neg  = np.argwhere(tmp_x < self._template)
-    #                 values = tmp_x[idx_arr_neg]+1
-    #             else:
-    #                 idx_arr_neg  = np.argwhere(tmp_x> self._template)
-    #                 values = tmp_x[idx_arr_neg]-1
-    #             if len(idx_arr_neg)>0:
-    #                 tmp_arr = np.repeat([tmp_x],len(idx_arr_neg),axis=0)
-    #                 tmp_arr =npu.update_per_row(tmp_arr,idx_arr_neg.flatten(),values)
-    #                 x_close.extend(tmp_arr)
-                
-    #             self.generate_neighbours(tmp_x, positive_target, current_degree, x_close, max_degree) 
-    #     #remove duplicates
-    #     if len(x_close)>0:
-    #         if len(x_close)>1:
-    #             x_close = np.unique(x_close,axis=0)
-    #         return list(x_close)
-    #     return []
-

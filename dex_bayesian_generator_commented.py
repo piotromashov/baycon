@@ -1,3 +1,4 @@
+from numpy.random import random_sample
 from dex_bayesian_generator import surrogate
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
@@ -50,10 +51,10 @@ def opt_acquisition(model, X, X_candidates, top_n = 10):
         
     return alternatives,X_candidates
 
-def run_generator(model, random_alternatives, dataconstraints, initial_instance, target, first_sample = 3):    
+def run_generator(model, random_alternatives, dataconstraints, initial_instance, target):    
     #TODO: include logging library for log
     print('-----Starting------')
-    print('model:',model,'first_sample:',first_sample,'target:',target,'template:',initial_instance)
+    print('model:',model,'target:',target,'template:',initial_instance)
     
     #TODO: make it read from a config file
     ## --- CONFIG ---
@@ -82,20 +83,25 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
     checker = InstancesChecker(model, surrogate_model, initial_instance, dataconstraints)
     generator = InstancesGenerator(initial_instance, dataconstraints, neighbours_max_degree)
 
+    # --- BOOTSTRAP ---
+    #here we should generate the neighbours of the initial instance
     X = random_alternatives
     Y = checker.calculate_objective_all(X, target)
+    #improvement: oversample X based on score Y
     checker.train_surrogate(X,Y)
+    # --- END BOOTSTRAP ---
 
     best_instance_neighbours = []
     best_instances_pool = []
     promising_alternatives_pool = []
 
-    all_counterfactuals = X[Y==target]
+    all_counterfactuals = X[Y>0]
     known_alternatives = X.copy() #known_alternatives to avoid duplicates
     best_instance = X[np.argmax(Y)]
     best_instance_output = max(Y)
 
-    if best_instance_output>0:
+    #update best
+    if best_instance_output:
         X = np.vstack((X, np.repeat([best_instance], oversampling_weight, axis=0)))
         Y = np.concatenate((Y, np.repeat(best_instance_output, oversampling_weight)))
         
@@ -109,8 +115,7 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
     # random_alternatives = np.array([[1],[1]])
     
     while epoch < num_epochs:
-        print('----')
-        print(epoch,'epoch')
+        print("--- epoch {} ----".format(epoch))
         #helper variables
         objective_zero += 1
         improvement_zero += 1

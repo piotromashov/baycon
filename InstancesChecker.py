@@ -1,5 +1,6 @@
 import numpy as np
 import numpy_utils as npu
+import acquisition_functions as acq_functions
 
 class InstancesChecker:
     def __init__(self, objective_model, surrogate_model, initial_instance, dataconstraints):
@@ -85,15 +86,10 @@ class InstancesChecker:
         alternatives = np.unique(alternatives,axis=0)
         return alternatives,Y
 
-    def promising_pool_check(self, alternatives, best_instances, best_output, target):
-        objective_values = self.calculate_objective_all(alternatives, target)
-        #update new best_output if objective_values has a greater one
-        #train surrogate model with new known outputs
-        #run acquisition function and get output sorted
-
-        #run generation of neighbours for each one of them
-
-        pass
+    def rank(self, known_instances, instances_to_check):
+        top_instances, _ = self.opt_acquisition(known_instances, instances_to_check)
+        return top_instances
+        
 
         #calculate objective fuction for a list aletrnatives
     def calculate_objective_all(self, alternatives, target):
@@ -114,3 +110,44 @@ class InstancesChecker:
         targets_achieved = Y==target
         objective_values = relative_similarity*targets_achieved    
         return objective_values
+
+    #returns mean values and standard deviation calculated over the predictions
+    #from each separate model from a given ensemble models
+    def get_ensemble_scores(self, X):
+        ens_predictions = []
+        for est in range(len(self._surrogate_model.estimators_)): 
+            ens_predictions.append(self._surrogate_model.estimators_[est].predict(X))
+        ens_predictions = np.array(ens_predictions)
+
+        mu = ens_predictions.mean(axis=0)
+        std = ens_predictions.std(axis=0)
+        return mu, std
+
+    # returns scores caclulated with an acquisition function (see acqusition_functions.py)
+    def acquisition(self, X, X_candidates):
+        mu, _ = self.get_ensemble_scores(X)
+        best_mu = max(mu)
+        mu, std = self.get_ensemble_scores(X_candidates)
+        score = acq_functions.EI(mu, std, best_mu, epsilon=.001)
+        return score
+
+    # select top_n alternatives based on the acquisition function
+    def opt_acquisition(self, X, X_candidates, top_n = 10):
+        # calculate the acquisition function for each candidate
+        scores = self.acquisition(X, X_candidates)
+        # locate the index of the largest scores
+        #TODO: remove this safeguard
+        if top_n>len(scores)//2:
+            top_n = len(scores)//2
+        best_alternatives_index = np.argpartition(scores, -top_n)[-top_n:] #get top_n candidates
+        best_alternatives= X_candidates[best_alternatives_index]
+        random_alternatives_index =np.random.randint(0,len(X_candidates),top_n) #get_random_candidates
+        random_alternatives =  X_candidates[random_alternatives_index]
+        
+        #remove candidates from the random candidates, as they will be available in X
+        remove_index = np.concatenate([random_alternatives_index,best_alternatives_index])
+        X_candidates = np.delete(X_candidates,remove_index,axis=0)
+
+        alternatives = npu.stack_not_repeated(best_alternatives, random_alternatives)
+            
+        return alternatives,X_candidates

@@ -1,4 +1,5 @@
-import dex_bayesian_generator_commented as bag_dsm
+# import dex_bayesian_generator_commented as bag_dsm
+import bayesian_generator as bag_dsm
 from sklearn.datasets import fetch_openml
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import KBinsDiscretizer
@@ -35,7 +36,6 @@ counterfactuals, time_to_first_solution = bag_dsm.run_generator(
     data_constraints,
     initial_instance, #string representation of initial instance
     target = 1, # goal we want the achieve
-    first_sample = 3 # amount of samples for each possible output
 )
 
 print("initial instance: {}, output: {}".format(initial_instance, model.predict([initial_instance])))
