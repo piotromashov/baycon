@@ -34,19 +34,19 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
     # --- END COUNTERS ---
     
     surrogate_model = RandomForestRegressor(1000,n_jobs=4)
-    #TODO add target to the checker object
-    checker = InstancesChecker(model, surrogate_model, initial_instance, dataconstraints)
+    checker = InstancesChecker(model, surrogate_model, initial_instance, dataconstraints, target)
     generator = InstancesGenerator(initial_instance, dataconstraints, neighbours_max_degree)
 
     # --- BOOTSTRAP ---
     #TODO here we should generate the neighbours of the initial instance
     X = random_alternatives
-    Y = checker.calculate_objective_all(X, target)
+    Y = checker.calculate_objective_all(X)
     #TODO improvement: oversample X based on score Y
     checker.train_surrogate(X,Y)
     # --- END BOOTSTRAP ---
 
     all_counterfactuals = X[Y>0]
+    all_counterfactuals_scores = Y[Y>0]
     known_instances = X.copy() #known_alternatives to avoid duplicates
     promising_alternatives_pool = np.array([], dtype=np.int64).reshape(0,initial_instance.shape[0])
     iteration_instances = X
@@ -95,12 +95,14 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
         #rank aka acquisition function
         ranked_instances = checker.rank(X, iteration_instances)
         iteration_instances = ranked_instances[:TOP_RANKED]
-        iteration_scores = checker.calculate_objective_all(iteration_instances, target)
+        iteration_scores = checker.calculate_objective_all(iteration_instances)
 
         #update new counterfactuals found
-        top_scores_achieved_target = iteration_scores > 0.01
-        counterfactuals = iteration_instances[top_scores_achieved_target]
-        all_counterfactuals = npu.unique_concatenate(all_counterfactuals, counterfactuals)
+        top_scores_achieved_target_index = iteration_scores > 0.01
+        counterfactuals = iteration_instances[top_scores_achieved_target_index]
+        all_counterfactuals = np.concatenate((all_counterfactuals, counterfactuals))
+        top_scores_achieved_target = iteration_scores[top_scores_achieved_target_index]
+        all_counterfactuals_scores = np.concatenate((all_counterfactuals_scores, top_scores_achieved_target))
 
         #update known instances
         known_instances = npu.unique_concatenate(known_instances, iteration_instances)
@@ -119,8 +121,8 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
             best_global_instance = iteration_instances[new_best_global_score_index][0]
             #oversample new best
             print("New best found {}, with {}, oversampling".format(best_global_instance, best_global_score))
-            oversampled_best_instance = np.repeat([best_global_instance],oversampling_weight,axis=0)
-            oversampled_best_score = np.repeat(best_global_score,oversampling_weight)
+            oversampled_best_instance = np.repeat([best_global_instance], oversampling_weight, axis=0)
+            oversampled_best_score = np.repeat(best_global_score, oversampling_weight)
             #update training data with oversampled best
             X = np.concatenate((X, oversampled_best_instance))
             Y = np.concatenate((Y, oversampled_best_score), axis=None)
@@ -140,14 +142,16 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
     i = 0
     while len(promising_alternatives_pool) and i < max_iterations:
         i += 1
-        promising_alternatives_scores = checker.calculate_objective_all(promising_alternatives_pool, target)
+        promising_alternatives_scores = checker.calculate_objective_all(promising_alternatives_pool)
         known_instances = npu.unique_concatenate(known_instances, promising_alternatives_pool)
-        promising_alternatives_achieved_target = promising_alternatives_scores > 0.01
+        promising_alternatives_achieved_target_index = promising_alternatives_scores > 0.01
         #update counterfactuals
-        counterfactuals = promising_alternatives_pool[promising_alternatives_achieved_target]
+        counterfactuals = promising_alternatives_pool[promising_alternatives_achieved_target_index]
+        counterfactuals_scores = promising_alternatives_scores[promising_alternatives_achieved_target_index]
         print("From promising pool: {}, found counterfactuals: {}".format(len(promising_alternatives_pool), len(counterfactuals)))
-        all_counterfactuals = npu.unique_concatenate(all_counterfactuals, counterfactuals)
+        all_counterfactuals = np.concatenate((all_counterfactuals, counterfactuals))
+        all_counterfactuals_scores = np.concatenate((all_counterfactuals_scores, counterfactuals_scores))
         promising_alternatives_pool = generator.generate_neighbours_arr(counterfactuals, known_instances)
 
     print("Generated counterfactuals {}".format(len(all_counterfactuals)))
-    return all_counterfactuals, 0
+    return all_counterfactuals, all_counterfactuals_scores, 0

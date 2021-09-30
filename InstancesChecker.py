@@ -3,11 +3,12 @@ import numpy_utils as npu
 import acquisition_functions as acq_functions
 
 class InstancesChecker:
-    def __init__(self, objective_model, surrogate_model, initial_instance, dataconstraints):
+    def __init__(self, objective_model, surrogate_model, initial_instance, dataconstraints, target):
         self._objective_model = objective_model
         self._surrogate_model = surrogate_model
         self._initial_instance = initial_instance
         self._dataconstraints = dataconstraints
+        self._target = target
 
     def train_surrogate(self, X, Y):
         self._surrogate_model.fit(X,Y)
@@ -16,7 +17,7 @@ class InstancesChecker:
         return self._surrogate_model
 
     #check promising_alternatives_pool 
-    def check_promising_alternatives(self, alternatives,best_y,best_pool,threshold,target):
+    def check_promising_alternatives(self, alternatives,best_y,best_pool,threshold):
         print('checking promising_alternatives')
         top_n = 1000
         if not len(alternatives):
@@ -42,7 +43,7 @@ class InstancesChecker:
         #check real objective value of the alternative and its neighbours
         if len(alternatives)>0:
             #check real objective value of all alternatives
-            Y_tmp=self.calculate_objective_all(alternatives, target)
+            Y_tmp = self.calculate_objective_all(alternatives)
             
             alternatives = np.vstack((alternatives,best_pool))
             Y = np.concatenate((Y_tmp,Y))
@@ -78,7 +79,7 @@ class InstancesChecker:
             x_close = list(npu.not_repeated(alternatives, x_close))
             
             if len(x_close)>0:  
-                Y_tmp=self.calculate_objective_all(x_close, target)
+                Y_tmp=self.calculate_objective_all(x_close)
                 alternatives = np.vstack((alternatives,x_close))
                 Y = np.concatenate((Y,Y_tmp))
                 alternatives = alternatives[Y>=best_y]
@@ -92,7 +93,7 @@ class InstancesChecker:
         
 
         #calculate objective fuction for a list aletrnatives
-    def calculate_objective_all(self, alternatives, target):
+    def calculate_objective_all(self, alternatives):
         #get model prediction on those values
         Y = self._objective_model.predict(alternatives)
         Y = np.array(Y)
@@ -107,7 +108,7 @@ class InstancesChecker:
 
         # check if we are moving towards the target or not.
         #if we are not moving towards the target, this is weighted as 0
-        targets_achieved = Y==target
+        targets_achieved = Y==self._target
         objective_values = relative_similarity*targets_achieved    
         return objective_values
 
