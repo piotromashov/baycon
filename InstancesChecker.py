@@ -11,8 +11,8 @@ class InstancesChecker:
         self._dataconstraints = dataconstraints
         self._target = target
 
-    def train_surrogate(self, X, Y):
-        self._surrogate_model.fit(X, Y)
+    def train_surrogate(self, instances, scores):
+        self._surrogate_model.fit(instances, scores)
 
     def surrogate(self):
         return self._surrogate_model
@@ -20,12 +20,12 @@ class InstancesChecker:
     def rank(self, known_instances, instances_to_check, top_ranked):
         return self.opt_acquisition(known_instances, instances_to_check, top_ranked)
 
-    def calculate_objective_all(self, alternatives):
+    def calculate_objective_all(self, instances):
         # obtain model prediction on those values
-        Y = np.array(self._objective_model.predict(alternatives))
+        Y = np.array(self._objective_model.predict(instances))
         max_distance = self._dataconstraints.features_max_distance()
         # here should go the cost of attribute changes and their weights
-        instance_distance = npu.distance_arr(alternatives, self._initial_instance)
+        instance_distance = npu.distance_arr(instances, self._initial_instance)
         # closeness to feature space of the potential counterfactual to the initial instance.
         relative_similarity = 1 - instance_distance / max_distance
         # check if we are moving towards the target or not.
@@ -36,10 +36,10 @@ class InstancesChecker:
 
     # returns mean values and standard deviation calculated over the predictions
     # from each separate model from a given ensemble models
-    def get_ensemble_scores(self, X):
+    def get_ensemble_scores(self, instances):
         ens_predictions = []
         for est in range(len(self._surrogate_model.estimators_)):
-            ens_predictions.append(self._surrogate_model.estimators_[est].predict(X))
+            ens_predictions.append(self._surrogate_model.estimators_[est].predict(instances))
         ens_predictions = np.array(ens_predictions)
 
         mu = ens_predictions.mean(axis=0)
@@ -47,10 +47,10 @@ class InstancesChecker:
         return mu, std
 
     # returns scores caclulated with an acquisition function (see acqusition_functions.py)
-    def acquisition(self, X, X_candidates):
-        mu, _ = self.get_ensemble_scores(X)
+    def acquisition(self, known_instances, instances_to_check):
+        mu, _ = self.get_ensemble_scores(known_instances)
         best_mu = max(mu)
-        mu, std = self.get_ensemble_scores(X_candidates)
+        mu, std = self.get_ensemble_scores(instances_to_check)
         score = acq_functions.EI(mu, std, best_mu, epsilon=.001)
         return score
 

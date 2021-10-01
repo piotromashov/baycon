@@ -19,22 +19,6 @@ def distance_arr(alternatives, template):
     return np.sum(distance, axis=1)
 
 
-# returns positions of attributes with differnet values than the template_numeric
-# TODO: return indexes where we can improve distance, and their direction
-def find_changes(alternative, initial_instance):
-    indixes_positive = alternative < initial_instance
-    indixes_negative = alternative > initial_instance
-    return indixes_positive, indixes_negative
-
-
-# updates columns at index indx with the given values val from a given matrix A, updates eac
-# can be optimized. e.g., to avoid geenrating duplicates
-def update_per_row(A, indx, val, num_elem=1):
-    all_indx = indx[:, None] + np.arange(num_elem)
-    A[np.arange(all_indx.shape[0])[:, None], all_indx] = val
-    return A
-
-
 def not_repeated(known_instances, new_instances):
     last_idx = len(known_instances) - 1
     instances = np.concatenate((known_instances, new_instances))
@@ -42,11 +26,6 @@ def not_repeated(known_instances, new_instances):
     idx_arr = idx_arr[idx_arr > last_idx]
     instances = instances[idx_arr]
     return instances
-
-
-def stack_not_repeated(known, new):
-    new_unique = not_repeated(known, new)
-    return np.vstack([known, new_unique])
 
 
 def unique_concatenate(known_instances, new_instances):

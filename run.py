@@ -1,13 +1,10 @@
-# import dex_bayesian_generator_commented as bag_dsm
 import bayesian_generator as bag_dsm
 from sklearn.datasets import fetch_openml
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import KBinsDiscretizer
 import numpy_utils as npu
 from DataConstraints import DataConstraints
-
-# possible target values that the plugin model can have
-# output_values= ['tested_negative', 'tested_positive']
+from collections import Counter
 
 dataset = fetch_openml(name='diabetes', version=1)
 
@@ -52,8 +49,6 @@ class CounterfactualInfo:
     def __repr__(self) -> str:
         return "({}, {}, {},)".format(self._counterfactual, self._distance, self._score)
 
-
-from collections import Counter
 
 distances = npu.distance_arr(counterfactuals, initial_instance)
 distances_counter = Counter(distances)
