@@ -131,11 +131,11 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
 
         # retrain surrogate model with updated training data
         # TODO: improvement: do this if there has been an % increase in data
-        print("re-training surrogate model with data size: {}".format(X.shape[0]))
+        print("Re-training surrogate model with data size: {}".format(X.shape[0]))
         checker.train_surrogate(X, Y)
 
     # perform final check in instances
-    print("Performing final check on promising alternatives")
+    print("--- Final check on promising alternatives ---")
     max_iterations = 1
     i = 0
     while len(promising_alternatives_pool) and i < max_iterations:
