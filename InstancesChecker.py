@@ -60,17 +60,5 @@ class InstancesChecker:
         scores = self.acquisition(known_instances, instances_to_check)
         # locate the index of the largest scores
         top_ranked = len(scores) if top_ranked > len(scores) else top_ranked
-
         best_alternatives_index = np.argpartition(scores, -top_ranked)[-top_ranked:]  # get top_n candidates
-        best_alternatives = instances_to_check[best_alternatives_index]
-        # TODO: ask: why is this adding random alternatives?
-        random_alternatives_index = np.random.randint(0, len(instances_to_check), top_ranked)  # get_random_candidates
-        random_alternatives = instances_to_check[random_alternatives_index]
-
-        # remove candidates from instances_to_check, as they will be available in known_instances
-        # remove_index = np.concatenate([random_alternatives_index,best_alternatives_index])
-        # instances_to_check = np.delete(instances_to_check, remove_index, axis=0)
-
-        alternatives = npu.unique_concatenate(best_alternatives, random_alternatives)
-
-        return alternatives
+        return instances_to_check[best_alternatives_index].copy()
