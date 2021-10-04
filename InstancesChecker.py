@@ -2,7 +2,7 @@ import numpy as np
 import numpy_utils as npu
 import acquisition_functions as acq_functions
 
-
+# TODO: update this class to InstancesRanker, remove all unused initialization variables
 class InstancesChecker:
     def __init__(self, objective_model, surrogate_model, initial_instance, dataconstraints, target):
         self._objective_model = objective_model
@@ -20,19 +20,19 @@ class InstancesChecker:
     def rank(self, known_instances, instances_to_check, top_ranked):
         return self.opt_acquisition(known_instances, instances_to_check, top_ranked)
 
-    def calculate_objective_all(self, instances):
-        # obtain model prediction on those values
-        Y = np.array(self._objective_model.predict(instances))
+    def rank_with_objective(self, known_instances, instances_to_check, top_ranked):
+        Y = np.array(self._objective_model.predict(instances_to_check))
         max_distance = self._dataconstraints.features_max_distance()
         # here should go the cost of attribute changes and their weights
-        instance_distance = npu.distance_arr(instances, self._initial_instance)
+        distances = npu.distance_arr(instances_to_check, self._initial_instance)
         # closeness to feature space of the potential counterfactual to the initial instance.
-        relative_similarity = 1 - instance_distance / max_distance
+        similarity = 1 - distances / max_distance
         # check if we are moving towards the target or not.
         # if we are not moving towards the target, this is weighted as 0
         targets_achieved = Y == self._target
-        objective_values = relative_similarity * targets_achieved
-        return objective_values
+        score = similarity * targets_achieved
+        sorted_index = np.argsort(score)
+        return instances_to_check[sorted_index][-top_ranked:]
 
     # returns mean values and standard deviation calculated over the predictions
     # from each separate model from a given ensemble models

@@ -4,8 +4,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import KBinsDiscretizer
 import numpy_utils as npu
 from DataConstraints import DataConstraints
-from collections import Counter
-
 dataset = fetch_openml(name='diabetes', version=1)
 
 # transform data in the dataset from constant values into discrete ones using bins
@@ -24,7 +22,7 @@ model.fit(discrete_dataset[0:-10], binary_target[0:-10])
 
 # run BAG DSM
 print('running BAG-DSM')
-counterfactuals, scores, time_to_first_solution = bag_dsm.run_generator(
+instancesInfo, time_to_first_solution = bag_dsm.run_generator(
     model,  # DSM
     data_constraints,
     initial_instance,  # string representation of initial instance
@@ -32,27 +30,6 @@ counterfactuals, scores, time_to_first_solution = bag_dsm.run_generator(
 )
 
 print("initial instance: {}, output: {}".format(initial_instance, model.predict([initial_instance])))
-
-
-# logging purposes
-# TODO: improve: we could just re-calculate distances and score after the fact of obtaining the counterfactuals
-class CounterfactualInfo:
-    def __init__(self, counterfactual, distance, score):
-        self._counterfactual = counterfactual
-        self._distance = distance
-        self._score = score
-
-    def __repr__(self) -> str:
-        return "({}, {}, {},)".format(self._counterfactual, self._distance, self._score)
-
-
-distances = npu.distance_arr(counterfactuals, initial_instance)
-distances_counter = Counter(distances)
-counterfactuals_info = [CounterfactualInfo(counterfactuals[k], distances[k], scores[k]) for k in
-                        range(len(counterfactuals))]
-
-sorted_distance = sorted(distances_counter.items(), key=lambda pair: pair[0])
-
-for k, (distance, count) in enumerate(sorted_distance):
-    scores = [cfi._score for cfi in counterfactuals_info if cfi._distance == distance][0]
-    print("Instances with distance {} are {}, score: {}".format(distance, count, scores))
+print("Generated counterfactuals {}".format(instancesInfo.achieved_target_count()))
+for (distance, count, score) in instancesInfo.achieved_target_summary():
+    print("Instances with distance {} are {}, score: {}".format(distance, count, score))
