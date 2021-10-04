@@ -2,6 +2,9 @@ from collections import Counter
 import numpy as np
 import numpy_utils as npu
 
+SCORE_JITTER = 0.75     # giving search space for the solutions we are finding
+
+
 class InstancesInfo:
     def __init__(self, instances, model, initial_instance, dataconstraints, target):
         self._model = model
@@ -64,8 +67,8 @@ class InstancesInfo:
             representation.append((distance, count, score))
         return representation
 
-    def near(self, instance_score, score_jitter):
-        near_best_index = self._scores > instance_score * score_jitter
+    def near(self, instance_score):
+        near_best_index = self._scores > instance_score * SCORE_JITTER
         return self._instances[near_best_index]
 
     def info(self):

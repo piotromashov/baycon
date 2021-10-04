@@ -1,18 +1,22 @@
 from numpy.random import default_rng
-
 import numpy_utils as npu
 import numpy as np
 from sklearn.utils.extmath import cartesian
 
+RANDOM_SAMPLE_SIZE = 10000
+CHANGES_JITTER = 8          # TODO: put 20% of feature size
+NEIGHBOUR_MAX_DEGREE = 3
+
 
 class InstancesGenerator:
-    def __init__(self, template, dataconstraints, neighbours_max_degree):
+    def __init__(self, template, data_constraints):
         self._template = template
-        self._min_values = dataconstraints.min_feature_values()
-        self._max_values = dataconstraints.max_feature_values()
-        self._max_distance = neighbours_max_degree
+        self._min_values = data_constraints.min_feature_values()
+        self._max_values = data_constraints.max_feature_values()
 
-    def generate_random(self, size, num_changes, known_alternatives):
+    def generate_random(self, distance, known_alternatives):
+        num_changes = distance * CHANGES_JITTER
+
         features_amount = len(self._template)
         if num_changes > features_amount / 2:
             num_changes = num_changes // 2
@@ -21,14 +25,11 @@ class InstancesGenerator:
         if not num_changes:
             num_changes = min_change
 
-        instances = np.random.rand(size,
-                                   len(self._template))  # random matrix with n samples with values between 0 and 1
-
         # maximum and minimum allowed change for one attribute (e.g., from 0 to 3)
         max_value = max(self._max_values)
         min_value = -max_value
 
-        random_matrix = np.random.randint(min_value, max_value, (size, features_amount))
+        random_matrix = np.random.randint(min_value, max_value, (RANDOM_SAMPLE_SIZE, features_amount))
 
         instances = random_matrix + self._template  # increase each row with the template (i.e., increase template values by zero,one or two)
 
@@ -38,9 +39,6 @@ class InstancesGenerator:
         instances[instances < self._min_values] = 0
 
         instances = instances.astype(int)
-
-        # increase atrute values that have lower values thetemplate
-
         # remove samples that are same as the template
         instances = instances[np.sum(instances != self._template, axis=1) > 0]
 
@@ -79,9 +77,9 @@ class InstancesGenerator:
         decrease_index = self._template < origin_instance
         # create movement boundaries array, with maximum distance consideration
         movement_array = origin_instance.copy()
-        movement_array[decrease_index] = np.maximum(origin_instance[decrease_index] - self._max_distance,
+        movement_array[decrease_index] = np.maximum(origin_instance[decrease_index] - NEIGHBOUR_MAX_DEGREE,
                                                     self._template[decrease_index])
-        movement_array[increase_index] = np.minimum(origin_instance[increase_index] + self._max_distance,
+        movement_array[increase_index] = np.minimum(origin_instance[increase_index] + NEIGHBOUR_MAX_DEGREE,
                                                     self._template[increase_index])
 
         # create ranges for each feature exploration
@@ -94,6 +92,6 @@ class InstancesGenerator:
         # create all combinations for each feature movement possible values
         neighbours = cartesian(features_movement_range)
         distances = npu.distance_arr(neighbours, origin_instance)
-        neighbours = neighbours[distances <= self._max_distance]
+        neighbours = neighbours[distances <= NEIGHBOUR_MAX_DEGREE]
         unique_neighbours = npu.not_repeated(known_alternatives, neighbours)
         return unique_neighbours
