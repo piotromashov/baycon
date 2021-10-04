@@ -1,3 +1,5 @@
+from numpy.random import default_rng
+
 import numpy_utils as npu
 import numpy as np
 from sklearn.utils.extmath import cartesian
@@ -47,6 +49,21 @@ class InstancesGenerator:
         random_optimal_instances = instances[(d <= num_changes) & (d >= min_change)]
         random_optimal = npu.not_repeated(known_alternatives, random_optimal_instances)
         return random_optimal
+
+    def generate_initial_neighbours(self):
+        # generate normal distribution
+        sample_size = 100
+        rng = default_rng()
+        # calculate mean and std based on min and max values
+        means = np.mean([self._max_values, self._min_values], axis=0)
+        stds = np.sqrt(self._max_values - means)
+        # for each feature of initial_instance, generate samples in normal distribution
+        features = [np.round(rng.normal(self._template[k], stds[k], size=sample_size)) for k in range(len(means))]
+        # clip for min and max values
+        for key, feature_samples in enumerate(features):
+            features[key] = np.clip(feature_samples, self._min_values[key], self._max_values[key])
+        random_instances = np.array(features).transpose()
+        return random_instances
 
     def generate_neighbours_arr(self, origin_instances, known_alternatives):
         total_neighbours = np.array([], dtype=np.int64).reshape(0, self._template.shape[0])

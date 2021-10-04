@@ -2,13 +2,14 @@ from sklearn.ensemble import RandomForestRegressor
 from InstancesGenerator import *
 from InstancesChecker import *
 
-def run_generator(model, random_alternatives, dataconstraints, initial_instance, target):
+
+def run_generator(model, dataconstraints, initial_instance, target):
     # TODO: include logging library for log
     print('-----Starting------')
     print('model:', model, 'target:', target, 'template:', initial_instance)
 
     # TODO: read from config file
-    ## --- CONFIG ---
+    # --- CONFIG ---
     random_sample_size = 10000  # random instances for the bayesian model
     oversampling_weight = 10  # TODO should we keep oversampling?
     neighbours_max_degree = 3
@@ -34,7 +35,7 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
 
     # --- BOOTSTRAP ---
     # TODO here we should generate the neighbours of the initial instance
-    X = random_alternatives
+    X = generator.generate_initial_neighbours()
     Y = checker.calculate_objective_all(X)
     # TODO improvement: oversample X based on score Y
     checker.train_surrogate(X, Y)
@@ -150,7 +151,7 @@ def run_generator(model, random_alternatives, dataconstraints, initial_instance,
                                                                           len(counterfactuals)))
         all_counterfactuals = np.concatenate((all_counterfactuals, counterfactuals))
         all_counterfactuals_scores = np.concatenate((all_counterfactuals_scores, counterfactuals_scores))
-        promising_alternatives_pool = generator.generate_neighbours_arr(counterfactuals, known_instances)
+        # promising_alternatives_pool = generator.generate_neighbours_arr(counterfactuals, known_instances)
 
     print("Generated counterfactuals {}".format(len(all_counterfactuals)))
     return all_counterfactuals, all_counterfactuals_scores, 0

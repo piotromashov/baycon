@@ -1,12 +1,6 @@
 import numpy as np
 
 
-def generate_random_alternatives(dataset, n):
-    # return dataset[random.choices(range(len(dataset)), k=n)
-    # getting the last n as "random"
-    return dataset[len(dataset) - (n + 1):]
-
-
 # distance metrics between two samples
 def distance(alternative, template):
     distance = np.abs(alternative - template)

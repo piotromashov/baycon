@@ -14,9 +14,6 @@ discrete_dataset = discretizer.fit_transform(dataset.data)
 # get information about the possible values for the features
 data_constraints = DataConstraints(discrete_dataset)
 
-# string representation of the initial instances.
-random_alternatives = npu.generate_random_alternatives(discrete_dataset, n=10)
-
 # generate starting alternatives and train the surrogate_model
 initial_instance = discrete_dataset[len(discrete_dataset) - 1]
 print('Starting alternative:', initial_instance)
@@ -29,7 +26,6 @@ model.fit(discrete_dataset[0:-10], binary_target[0:-10])
 print('running BAG-DSM')
 counterfactuals, scores, time_to_first_solution = bag_dsm.run_generator(
     model,  # DSM
-    random_alternatives,
     data_constraints,
     initial_instance,  # string representation of initial instance
     target=1,  # goal we want the achieve
