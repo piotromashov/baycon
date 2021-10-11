@@ -4,10 +4,10 @@ import acquisition_functions as acq_functions
 
 TOP_RANKED = 20
 OVERSAMPLING_AMOUNT = 10
+TRAINING_GROWTH = 5         # should not be a % of growth, because we are using a fixed top 20 ranked for now.
 
 
-# TODO: update this class to InstancesRanker, remove all unused initialization variables
-class InstancesChecker:
+class SurrogateRanker:
     def __init__(self, objective_model, surrogate_model, initial_instance, data_constraints, target):
         self._objective_model = objective_model
         self._surrogate_model = surrogate_model
@@ -16,9 +16,11 @@ class InstancesChecker:
         self._target = target
         self._X = np.array([], dtype=np.int64).reshape(0, self._initial_instance.shape[0])
         self._Y = np.array([])
+        self._updated_train_achieved_target = False
 
-    # TODO: improvement: do this if there has been an % increase in data
     def train(self):
+        if not self._updated_train_achieved_target:
+            return
         print("Re-training surrogate model with data size: {}".format(self._X.shape[0]))
         self._surrogate_model.fit(self._X, self._Y)
 
@@ -28,7 +30,7 @@ class InstancesChecker:
     def rank(self, known_instances, instances_to_check):
         return self.opt_acquisition(known_instances, instances_to_check)
 
-    def rank_with_objective(self, instances_to_check):
+    def rank_with_objective(self, known_instances, instances_to_check):
         Y = np.array(self._objective_model.predict(instances_to_check))
         max_distance = self._data_constraints.features_max_distance()
         # here should go the cost of attribute changes and their weights
@@ -54,7 +56,7 @@ class InstancesChecker:
         std = ens_predictions.std(axis=0)
         return mu, std
 
-    # returns scores caclulated with an acquisition function (see acqusition_functions.py)
+    # returns scores calculated with an acquisition function (see acquisition_functions.py)
     def acquisition(self, known_instances, instances_to_check):
         mu, _ = self.get_ensemble_scores(known_instances)
         best_mu = max(mu)
@@ -74,8 +76,8 @@ class InstancesChecker:
     def update(self, instances, scores):
         self._X = np.concatenate((self._X, instances))
         self._Y = np.concatenate((self._Y, scores), axis=None)
+        self._updated_train_achieved_target = len(scores[scores > 0]) > 0
 
-    # TODO improvement: oversample X based on score Y
     def oversample_update(self, instance, score):
         oversampled_instance = np.repeat([instance], OVERSAMPLING_AMOUNT, axis=0)
         oversampled_score = np.repeat(score, OVERSAMPLING_AMOUNT)
