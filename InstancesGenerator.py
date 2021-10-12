@@ -2,8 +2,10 @@ from numpy.random import default_rng
 import numpy_utils as npu
 import numpy as np
 from scipy.stats import truncnorm
+from Distance import Distance
 
 RANDOM_SAMPLE_SIZE = 10000
+NEIGHBOURS_SAMPLE_SIZE = 100
 
 
 class RandomDistMocker:
@@ -17,9 +19,15 @@ class RandomDistMocker:
 def get_truncated_normal(mean=0, sd=1, low=0, upp=10):
     if sd < 1 or low == upp:
         return RandomDistMocker(mean)
-
     return truncnorm(
         (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd)
+
+
+def normal_dist_neighbours(means, sds, bottoms, tops):
+    normal_distributions = [get_truncated_normal(means[k], sds[k], bottoms[k], tops[k]) for k in range(len(means))]
+    features = [np.round(nd.rvs(NEIGHBOURS_SAMPLE_SIZE)) for nd in normal_distributions]
+    neighbours = np.array(features).transpose()
+    return neighbours
 
 
 class InstancesGenerator:
@@ -27,9 +35,7 @@ class InstancesGenerator:
         self._template = template
         self._min_values = data_constraints.min_feature_values()
         self._max_values = data_constraints.max_feature_values()
-        self._features_range = data_constraints.features_range()
-        self._features_categorical = data_constraints.categorical()
-        self._weights = data_constraints.feature_weights()
+        self._distance_calculator = Distance(data_constraints)
 
     def generate_random(self, distance, known_alternatives):
         features_amount = len(self._template)
@@ -49,26 +55,16 @@ class InstancesGenerator:
         # remove samples that are same as the template
         instances = instances[np.sum(instances != self._template, axis=1) > 0]
 
-        distances = npu.calculate_gower_distance(
-            self._template,
-            instances,
-            self._features_range,
-            self._features_categorical,
-            self._weights
-        )
+        distances = self._distance_calculator.gower(self._template, instances)
         random_optimal_instances = instances[distances <= distance]
         random_optimal = npu.not_repeated(known_alternatives, random_optimal_instances)
         return random_optimal
 
     def generate_initial_neighbours(self):
-        sample_size = 100
         # calculate mean and std based on min and max values
         means = np.mean([self._max_values, self._min_values], axis=0)
-        stds = np.sqrt(self._max_values - means)
-        # for each feature of initial_instance, generate samples in normal distribution
-        normal_distributions = [get_truncated_normal(self._template[k], stds[k], self._min_values[k], self._max_values[k]) for k in range(len(means))]
-        features = [np.round(nd.rvs(sample_size)) for nd in normal_distributions]
-        neighbours = np.array(features).transpose()
+        sds = np.sqrt(self._max_values - means)
+        neighbours = normal_dist_neighbours(self._template, sds, self._min_values, self._max_values)
         return neighbours
 
     def generate_neighbours_arr(self, origin_instances, known_alternatives):
@@ -78,8 +74,7 @@ class InstancesGenerator:
             total_neighbours = npu.unique_concatenate(total_neighbours, neighbours)
         return total_neighbours
 
-    def generate_neighbours(self, origin_instance, known_alternatives, sample_size=100):
-        # print("Generating neighbours for: {}, initial instance: {}".format(origin_instance, self._template))
+    def generate_neighbours(self, origin_instance, known_alternatives):
         # calculate mean and std based on min and max values
         means = origin_instance
         sds = np.sqrt(np.abs(self._template - means))
@@ -89,25 +84,11 @@ class InstancesGenerator:
         tops = np.where(increase_index, self._template, origin_instance)
         bottoms = np.where(decrease_index, self._template, origin_instance)
 
-        normal_distributions = [get_truncated_normal(means[k], sds[k], bottoms[k], tops[k]) for k in range(len(means))]
-        features = [np.round(nd.rvs(sample_size)) for nd in normal_distributions]
-        neighbours = np.array(features).transpose()
+        neighbours = normal_dist_neighbours(means, sds, bottoms, tops)
 
         # remove all neighbours with distances that are bigger than current origin instance to the initial one
-        distances = npu.calculate_gower_distance(
-            origin_instance,
-            neighbours,
-            self._features_range,
-            self._features_categorical,
-            self._weights
-        )
-        distance_from_origin_to_initial = npu.calculate_gower_distance(
-            self._template,
-            np.array([origin_instance]),
-            self._features_range,
-            self._features_categorical,
-            self._weights
-        )
+        distances = self._distance_calculator.gower(origin_instance, neighbours)
+        distance_from_origin_to_initial = self._distance_calculator.gower(self._template, np.array([origin_instance]))
         neighbours = neighbours[distances <= distance_from_origin_to_initial]
         unique_neighbours = npu.not_repeated(known_alternatives, neighbours)
         return unique_neighbours

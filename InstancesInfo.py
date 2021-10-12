@@ -1,6 +1,7 @@
 from collections import Counter
 import numpy as np
 import numpy_utils as npu
+from Distance import Distance
 
 SCORE_JITTER = 0.75  # giving search space for the solutions we are finding
 MINIMUM_SCORE = 0
@@ -16,19 +17,14 @@ class InstancesInfo:
         self._instances = instances
         self._distance = []
         self._scores = []
+        self._distance_calculator = Distance(data_constraints)
         self.calculate_objective_all()
 
     def calculate_objective_all(self):
         # obtain model prediction on those values
         Y = np.array(self._model.predict(self._instances))
         # closeness to feature space of the potential counterfactual to the initial instance.
-        self._distance = 1 - npu.calculate_gower_distance(
-            self._initial_instance,
-            self._instances,
-            self._data_constraints.features_range(),
-            self._data_constraints.categorical(),
-            self._data_constraints.feature_weights()
-        )
+        self._distance = 1 - self._distance_calculator.gower(self._initial_instance, self._instances)
         # if we are not moving towards the target, this is weighted as 0
         targets_achieved = Y == self._target
         scores = self._distance * targets_achieved
