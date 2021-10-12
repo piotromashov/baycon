@@ -1,11 +1,11 @@
 from sklearn.ensemble import RandomForestRegressor
 
-from InstancesInfo import InstancesInfo
 from InstancesGenerator import *
+from InstancesInfo import InstancesInfo
 from SurrogateRanker import *
 
-EPOCHS_THRESHOLD = 150  # overall number of epochs to run the algorithm
-GLOBAL_NO_IMPROVEMENT_THRESHOLD = 50  # improvement on amount of epochs to stop without having improvements.
+EPOCHS_THRESHOLD = 50  # overall number of epochs to run the algorithm
+GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop without having improvements.
 
 
 def run_generator(model, data_analyzer, initial_instance, target):
@@ -87,7 +87,7 @@ def run_generator(model, data_analyzer, initial_instance, target):
             best_instance, best_distance, best_score = globalInstancesInfo.best()
             best_global_no_improvement_counter = 0
             best_epoch = epoch_counter
-            print("New best found {}, with {}, oversampling".format(best_instance, best_score))
+            print("New best found {}, with {}, oversampling".format(best_instance, "%.4f" % best_score))
             ranker.oversample_update(best_instance, best_score)
 
         print("Known alternatives: {}".format(len(globalInstancesInfo)))

@@ -1,5 +1,5 @@
 import numpy as np
-import numpy_utils as npu
+
 import acquisition_functions as acq_functions
 
 TOP_RANKED = 20
