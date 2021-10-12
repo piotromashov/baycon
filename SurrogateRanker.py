@@ -8,11 +8,11 @@ TRAINING_GROWTH = 5         # should not be a % of growth, because we are using 
 
 
 class SurrogateRanker:
-    def __init__(self, objective_model, surrogate_model, initial_instance, data_constraints, target):
+    def __init__(self, objective_model, surrogate_model, initial_instance, distance_calculator, target):
         self._objective_model = objective_model
         self._surrogate_model = surrogate_model
         self._initial_instance = initial_instance
-        self._data_constraints = data_constraints
+        self._distance_calculator = distance_calculator
         self._target = target
         self._X = np.array([], dtype=np.int64).reshape(0, self._initial_instance.shape[0])
         self._Y = np.array([])
@@ -32,12 +32,8 @@ class SurrogateRanker:
 
     def rank_with_objective(self, known_instances, instances_to_check):
         Y = np.array(self._objective_model.predict(instances_to_check))
-        max_distance = self._data_constraints.features_max_distance()
-        # here should go the cost of attribute changes and their weights
-        distances = npu.distance_arr(instances_to_check, self._initial_instance)
         # closeness to feature space of the potential counterfactual to the initial instance.
-        similarity = 1 - distances / max_distance
-        # check if we are moving towards the target or not.
+        similarity = 1 - self._distance_calculator.gower(self._initial_instance, instances_to_check)
         # if we are not moving towards the target, this is weighted as 0
         targets_achieved = Y == self._target
         score = similarity * targets_achieved

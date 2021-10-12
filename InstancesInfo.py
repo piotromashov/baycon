@@ -1,23 +1,22 @@
 from collections import Counter
 import numpy as np
-import numpy_utils as npu
-from Distance import Distance
 
 SCORE_JITTER = 0.75  # giving search space for the solutions we are finding
 MINIMUM_SCORE = 0
 
 
 class InstancesInfo:
-    def __init__(self, instances, model, initial_instance, data_constraints, target):
+    # TODO: remove score and use distance
+    # TODO: save if target have been achieved, move scores to a method instead and calculate
+    def __init__(self, instances, model, initial_instance, distance_calculator, target):
         self._model = model
         self._initial_instance = initial_instance
-        self._data_constraints = data_constraints
         self._target = target
         self._newBest = True
         self._instances = instances
         self._distance = []
         self._scores = []
-        self._distance_calculator = Distance(data_constraints)
+        self._distance_calculator = distance_calculator
         self.calculate_objective_all()
 
     def calculate_objective_all(self):

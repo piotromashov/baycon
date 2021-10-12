@@ -1,11 +1,11 @@
 import numpy as np
 
 
-class Distance:
-    def __init__(self, data_constraints):
-        self._features_range = data_constraints.features_range()
-        self._features_categorical = data_constraints.categorical()
-        self._weights = data_constraints.feature_weights()
+class DistanceCalculator:
+    def __init__(self, ranges, categorical, weights):
+        self._features_range = ranges
+        self._features_categorical = categorical
+        self._weights = weights
 
     # returns np.array of gower distances for each instance against the initial one
     def gower(self, origin_instance, instances):

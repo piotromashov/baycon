@@ -1,11 +1,16 @@
-import numpy as np
+from DistanceCalculator import *
 
 
-class DataConstraints:
-    def __init__(self, dataset, cat_features=False):
+class DataAnalyzer:
+    def __init__(self, dataset, cat_features=False, feature_weights=None):
         self._features_count = dataset.shape[1]
         self._min_values = np.min(dataset, axis=0)
         self._max_values = np.max(dataset, axis=0)
+
+        if feature_weights:
+            self._feature_weights = feature_weights
+        else:
+            self._feature_weights = np.ones(self._features_count)
 
         if cat_features:
             self._categorical_features = cat_features
@@ -22,28 +27,14 @@ class DataConstraints:
         for i in range(len(ranges)):
             if not self._categorical_features[i]:
                 ranges[i] = self._max_values[i] - self._min_values[i] + 1
-        self._features_range = ranges
+
+        self._distance_calculator = DistanceCalculator(ranges, self._categorical_features, self._feature_weights)
+
+    def distance_calculator(self):
+        return self._distance_calculator
 
     def min_feature_values(self):
         return self._min_values
 
     def max_feature_values(self):
         return self._max_values
-
-    def categorical(self):
-        return self._categorical_features
-
-    def numerical(self):
-        return self._numerical_features
-
-    def feature_weights(self):
-        return np.ones(self._features_count)
-
-    def features_count(self):
-        return self._features_count
-
-    def features_range(self):
-        return self._features_range
-
-    def features_max_distance(self):
-        return np.sum((self._max_values - self._min_values) + 1)

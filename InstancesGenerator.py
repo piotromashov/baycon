@@ -2,7 +2,6 @@ from numpy.random import default_rng
 import numpy_utils as npu
 import numpy as np
 from scipy.stats import truncnorm
-from Distance import Distance
 
 RANDOM_SAMPLE_SIZE = 10000
 NEIGHBOURS_SAMPLE_SIZE = 100
@@ -31,11 +30,11 @@ def normal_dist_neighbours(means, sds, bottoms, tops):
 
 
 class InstancesGenerator:
-    def __init__(self, template, data_constraints):
+    def __init__(self, template, data_analyzer):
         self._template = template
-        self._min_values = data_constraints.min_feature_values()
-        self._max_values = data_constraints.max_feature_values()
-        self._distance_calculator = Distance(data_constraints)
+        self._min_values = data_analyzer.min_feature_values()
+        self._max_values = data_analyzer.max_feature_values()
+        self._distance_calculator = data_analyzer.distance_calculator()
 
     def generate_random(self, distance, known_alternatives):
         features_amount = len(self._template)

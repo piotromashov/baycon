@@ -8,14 +8,15 @@ EPOCHS_THRESHOLD = 150  # overall number of epochs to run the algorithm
 GLOBAL_NO_IMPROVEMENT_THRESHOLD = 50  # improvement on amount of epochs to stop without having improvements.
 
 
-def run_generator(model, data_constraints, initial_instance, target):
+def run_generator(model, data_analyzer, initial_instance, target):
     # TODO: include logging library for logging
     print('-----Starting------')
     print('model:', model, 'target:', target, 'template:', initial_instance)
 
     surrogate_model = RandomForestRegressor(1000, n_jobs=4)
-    ranker = SurrogateRanker(model, surrogate_model, initial_instance, data_constraints, target)
-    generator = InstancesGenerator(initial_instance, data_constraints)
+    ranker = SurrogateRanker(model, surrogate_model, initial_instance, data_analyzer, target)
+    generator = InstancesGenerator(initial_instance, data_analyzer)
+    distance_calculator = data_analyzer.distance_calculator()
 
     # -- COUNTERS ---
     epoch_counter = 0
@@ -25,7 +26,7 @@ def run_generator(model, data_constraints, initial_instance, target):
 
     # --- BOOTSTRAP ---
     instances = generator.generate_initial_neighbours()
-    globalInstancesInfo = InstancesInfo(instances, model, initial_instance, data_constraints, target)
+    globalInstancesInfo = InstancesInfo(instances, model, initial_instance, distance_calculator, target)
     instances, distances, scores = globalInstancesInfo.info()
     ranker.update(instances, scores)
     ranker.train()
@@ -71,7 +72,7 @@ def run_generator(model, data_constraints, initial_instance, target):
 
         # rank aka acquisition function
         ranked_instances = ranker.rank(globalInstancesInfo.instances(), instances_to_check)
-        iterationInstancesInfo = InstancesInfo(ranked_instances, model, initial_instance, data_constraints, target)
+        iterationInstancesInfo = InstancesInfo(ranked_instances, model, initial_instance, distance_calculator, target)
         counterfactuals = iterationInstancesInfo.achieved_target_count()
         print("Predicted top: {} Counterfactuals: {}".format(len(ranked_instances), counterfactuals))
 
@@ -90,13 +91,13 @@ def run_generator(model, data_constraints, initial_instance, target):
             ranker.oversample_update(best_instance, best_score)
 
         print("Known alternatives: {}".format(len(globalInstancesInfo)))
-        print("Best instance: {}, score {}, found on epoch: {}".format(best_instance, best_score, best_epoch))
+        print("Best instance: {}, score {}, found on epoch: {}".format(best_instance, "%.4f" % best_score, best_epoch))
         # retrain surrogate model with updated training data
         ranker.train()
 
     # perform final check in instances
     print("--- Final check on promising alternatives ---")
-    lastCheckInstancesInfo = InstancesInfo(promising_instances, model, initial_instance, data_constraints, target)
+    lastCheckInstancesInfo = InstancesInfo(promising_instances, model, initial_instance, distance_calculator, target)
     achieved_target = lastCheckInstancesInfo.achieved_target_count()
     print("Promising pool: ({}) Found counterfactuals: ({})".format(len(promising_instances), achieved_target))
     globalInstancesInfo.extend(lastCheckInstancesInfo)
