@@ -4,7 +4,6 @@ import acquisition_functions as acq_functions
 
 TOP_RANKED = 20
 OVERSAMPLING_AMOUNT = 10
-TRAINING_GROWTH = 5         # should not be a % of growth, because we are using a fixed top 20 ranked for now.
 
 
 class SurrogateRanker:

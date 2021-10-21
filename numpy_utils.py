@@ -6,18 +6,6 @@ RANDOM_SAMPLE_SIZE = 1000
 NEIGHBOURS_SAMPLE_SIZE = 100
 
 
-# distance metrics between two samples
-def distance(alternative, template):
-    distance = np.abs(alternative - template)
-    return sum(distance)
-
-
-# same as distance() applied over an array of alternatives
-def distance_arr(alternatives, template):
-    distance = np.abs(alternatives - template)
-    return np.sum(distance, axis=1)
-
-
 def not_repeated(known_instances, new_instances):
     last_idx = len(known_instances) - 1
     instances = np.concatenate((known_instances, new_instances))

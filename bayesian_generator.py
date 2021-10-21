@@ -8,6 +8,10 @@ EPOCHS_THRESHOLD = 50  # overall number of epochs to run the algorithm
 GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop without having improvements.
 
 
+# TODO: refactor into an object Bayesian.generate()
+# 1st part with all __init__ stuff
+# 2nd with iteration of model
+# 3rd final check
 def run_generator(model, data_analyzer, initial_instance, target):
     # TODO: include logging library for logging
     print('-----Starting------')
