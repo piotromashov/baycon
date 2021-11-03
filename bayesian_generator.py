@@ -1,7 +1,7 @@
 from sklearn.ensemble import RandomForestRegressor
 
 from InstancesGenerator import *
-from InstancesInfo import InstancesInfo
+from InstancesInfo import *
 from SurrogateRanker import *
 
 EPOCHS_THRESHOLD = 50  # overall number of epochs to run the algorithm
@@ -16,6 +16,8 @@ def run_generator(model, data_analyzer, initial_instance, target):
     # TODO: include logging library for logging
     print('-----Starting------')
     print('model:', model, 'target:', target, 'template:', initial_instance)
+
+    t = time.process_time()
 
     surrogate_model = RandomForestRegressor(1000, n_jobs=4)
     ranker = SurrogateRanker(model, surrogate_model, initial_instance, data_analyzer, target)
@@ -106,4 +108,7 @@ def run_generator(model, data_analyzer, initial_instance, target):
     print("Promising pool: ({}) Found counterfactuals: ({})".format(len(promising_instances), achieved_target))
     globalInstancesInfo.extend(lastCheckInstancesInfo)
 
-    return globalInstancesInfo, 0
+    global first_solution_time
+    elapsed_time_to_first_solution = t - first_solution_time
+
+    return globalInstancesInfo, elapsed_time_to_first_solution

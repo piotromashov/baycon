@@ -1,10 +1,11 @@
+import time
 from collections import Counter
 
 import numpy as np
 
 SCORE_JITTER = 0.75  # giving search space for the solutions we are finding
 MINIMUM_SCORE = 0
-
+first_solution_time = False
 
 class InstancesInfo:
     # TODO: remove score and use distance
@@ -29,6 +30,10 @@ class InstancesInfo:
         targets_achieved = Y == self._target
         scores = self._distance * targets_achieved
         self._scores = scores
+
+        global first_solution_time
+        if scores[scores > 0].any() and not first_solution_time:
+            first_solution_time = time.process_time()
 
     def __len__(self):
         return len(self._instances)

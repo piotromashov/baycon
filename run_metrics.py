@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 
 from DataAnalyzer import *
@@ -10,12 +12,14 @@ data = np.array(dataset.values[:, :-1])
 data_analyzer = DataAnalyzer(data)
 distance_calculator = data_analyzer.distance_calculator().gower
 
-# TODO: read from file initial instance and all counterfactuals, calculate metrics and present them
-instances_filename = "instances.csv"
-instances = pd.read_csv(instances_filename).values[:, :-1]
+algorithm_output_filename = "algorithm_output.json"
 
-initial_instance = instances[0]
-counterfactuals = instances[1:]
+with open(algorithm_output_filename) as json_file:
+    data = json.load(json_file)
+    initial_instance = np.array(data["initial_instance"])
+    counterfactuals = np.array(data["counterfactuals"])
+    time_to_first_solution = data["time_to_first_solution"]
+    elapsed_time = data["total_time"]
 
-metrics = InstancesMetrics(initial_instance, counterfactuals, distance_calculator)
+metrics = InstancesMetrics(initial_instance, counterfactuals, distance_calculator, time_to_first_solution, elapsed_time)
 print(metrics)
