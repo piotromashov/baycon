@@ -12,85 +12,86 @@ textualise_counterfactuals`).
 # Author: Kacper Sokol <k.sokol@bristol.ac.uk>
 # License: new BSD
 
-from pprint import pprint
-
 import fatf.transparency.predictions.counterfactuals as fatf_cf
 import fatf.utils.data.datasets as fatf_datasets
 import fatf.utils.models as fatf_models
 import numpy as np
+import pandas as pd
 
 print(__doc__)
 
-# Load data
-iris_data_dict = fatf_datasets.load_iris()
-iris_X = iris_data_dict['data']
-iris_y = iris_data_dict['target'].astype(int)
-iris_feature_names = iris_data_dict['feature_names']
-iris_class_names = iris_data_dict['target_names']
+
+# The dataset file must be formatted in the *comma separated value* (*csv*)
+#     standard with ``,`` used as the delimiter. The first row of the file must
+#     be a header formatted as follows:
+#     ``n_samples,n_features,class_name_1,class_name_2,...``
+def format_csv_fatf(file_name):
+    dataset = pd.read_csv(csv_path)
+    shapes = [dataset.shape[0] - 1, dataset.shape[1] - 1]
+    target_column_name = dataset.columns[len(dataset.columns) - 1]
+    target = dataset[target_column_name]
+    categories = target.unique()
+    data = dataset.values[:, :-1].astype(float)
+    header = ','.join(str(e) for e in [*shapes, *categories])
+
+    modified_csv = file_name + '.mod'
+    with open(modified_csv, 'w') as write_obj:
+        write_obj.write(header + '\n')
+
+        i = 1  # start after the header
+        while i < len(data):
+            write_obj.write(', '.join(str(e) for e in data[i]) + ', ' + target[i] + '\n')
+            i += 1
+    # os.remove(file_name)
+
+
+csv_path = "../datasets/kc2.csv"
+format_csv_fatf(csv_path)
+
+dataset = fatf_datasets.load_data(csv_path + ".mod")
+X = np.array(dataset['data'])
+Y = dataset['target']
+
+# dataset = fatf_datasets.load_iris()
+# X = np.array(dataset['data'])
+# Y = dataset['target']
+
+# dataset = fetch_openml(name='kc2', version=1)
+# X = np.array(dataset['data'])
+# Y = dataset['target']
 
 # Train a model
+
+# clf = RandomForestClassifier()
 clf = fatf_models.KNN()
-clf.fit(iris_X, iris_y)
+clf.fit(X, Y)
 
 # Create a Counterfactual Explainer
 cf_explainer = fatf_cf.CounterfactualExplainer(
     model=clf,
-    dataset=iris_X,
+    dataset=X,
     categorical_indices=[],
     default_numerical_step_size=0.1)
 
-
-def describe_data_point(data_point_index):
-    """Prints out a data point with the specified given index."""
-    dp_to_explain = iris_X[data_point_index, :]
-    dp_to_explain_class_index = int(iris_y[data_point_index])
-    dp_to_explain_class = iris_class_names[dp_to_explain_class_index]
-
-    feature_description_template = '    * {} (feature index {}): {:.1f}'
-    features_description = []
-    for i, name in enumerate(iris_feature_names):
-        dsc = feature_description_template.format(name, i, dp_to_explain[i])
-        features_description.append(dsc)
-    features_description = ',\n'.join(features_description)
-
-    data_point_description = (
-        'Explaining data point (index {}) of class {} (class index {}) with '
-        'features:\n{}.'.format(data_point_index, dp_to_explain_class,
-                                dp_to_explain_class_index,
-                                features_description))
-
-    print(data_point_description)
-
-
-###############################################################################
-# Explain one of the data points.
-
 # Select a data point to be explained
-# Select a data point to be explained
-dp_1_index = -3
-dp_1_X = iris_X[dp_1_index, :]
-dp_1_y = iris_y[dp_1_index]
-describe_data_point(dp_1_index)
+dp_1_index = 3
+dp_1_X = X[dp_1_index, :]
+dp_1_y = Y[dp_1_index]
 
 # Get a Counterfactual Explanation tuple for this data point
+print("initial instance: {}, output: {}".format(dp_1_X, dp_1_y))
 dp_1_cf_tuple = cf_explainer.explain_instance(dp_1_X)
 dp_1_cfs, dp_1_cfs_distances, dp_1_cfs_predictions = dp_1_cf_tuple
-dp_1_cfs_predictions_names = np.array(
-    [iris_class_names[i] for i in dp_1_cfs_predictions])
 
-print('\nCounterfactuals for the data point:')
-pprint(dp_1_cfs)
-print('\nDistances between the counterfactuals and the data point:')
-pprint(dp_1_cfs_distances)
-print('\nClasses (indices and class names) of the counterfactuals:')
-pprint(dp_1_cfs_predictions)
-pprint(dp_1_cfs_predictions_names)
+print("Generated counterfactuals {}".format(len(dp_1_cfs)))
+# print('\nCounterfactuals for the data point:')
+# pprint(dp_1_cfs)
 
-# Textualise the counterfactuals
-dp_1_cfs_text = fatf_cf.textualise_counterfactuals(
-    dp_1_X,
-    dp_1_cfs,
-    instance_class=dp_1_y,
-    counterfactuals_distances=dp_1_cfs_distances,
-    counterfactuals_predictions=dp_1_cfs_predictions)
-print(dp_1_cfs_text)
+from DataAnalyzer import *
+
+data_analyzer = DataAnalyzer(X)
+distance_calculator = data_analyzer.distance_calculator()
+print("1 - Gower distances")
+for key, counterfactual in enumerate(dp_1_cfs):
+    score = 1 - distance_calculator.gower(dp_1_X, np.array([counterfactual]))
+    print("Counterfactual with score {} (01) {}".format("%.4f" % score, counterfactual))
