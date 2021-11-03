@@ -1,8 +1,12 @@
-import bayesian_generator as bag_dsm
+import pandas as pd
 from sklearn.datasets import fetch_openml
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import KBinsDiscretizer
+
+import bayesian_generator as bag_dsm
 from DataAnalyzer import DataAnalyzer
+
+filename = "instances.csv"
 
 dataset = fetch_openml(name='kc2', version=1)
 
@@ -26,4 +30,8 @@ instancesInfo, time_to_first_solution = bag_dsm.run_generator(model, data_analyz
 print("initial instance: {}, output: {}".format(initial_instance, model.predict([initial_instance])))
 print("Generated counterfactuals {}".format(instancesInfo.achieved_target_count()))
 for (score, count, instance) in instancesInfo.achieved_target_summary():
-    print("Instance with score {} ({}) {}".format("%.4f" % score, count, instance))
+    print("Counterfactual with score {} ({}) {}".format("%.4f" % score, count, instance))
+
+# save file
+output = (initial_instance + instancesInfo.achieved_target())
+pd.DataFrame(output).to_csv(filename, header=None, index=None)

@@ -1,4 +1,5 @@
 from collections import Counter
+
 import numpy as np
 
 SCORE_JITTER = 0.75  # giving search space for the solutions we are finding
@@ -63,6 +64,11 @@ class InstancesInfo:
             instance = achieved_instances[index]
             representation.append((distance, count, instance))
         return representation
+
+    def achieved_target(self):
+        achieved_indexes = self._scores > MINIMUM_SCORE
+        achieved_instances = self._instances[achieved_indexes]
+        return achieved_instances
 
     def near(self, instance_score):
         near_best_index = self._scores > instance_score * SCORE_JITTER
