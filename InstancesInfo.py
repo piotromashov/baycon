@@ -55,7 +55,7 @@ class InstancesInfo:
         self._distance = np.concatenate((self._distance, distances), axis=None)
         self._scores = np.concatenate((self._scores, scores), axis=None)
 
-    def achieved_target_summary(self):
+    def __str__(self):
         achieved_indexes = self._scores > MINIMUM_SCORE
         achieved_distances = self._distance[achieved_indexes]
         achieved_instances = self._instances[achieved_indexes]
@@ -68,7 +68,14 @@ class InstancesInfo:
             index = achieved_distances.tolist().index(distance)
             instance = achieved_instances[index]
             representation.append((distance, count, instance))
-        return representation
+
+        str_output = "initial instance: {}, output: {}\n".format(self._initial_instance,
+                                                                 self._model.predict([self._initial_instance]))
+        str_output += "Generated counterfactuals {}\n".format(self.achieved_target_count())
+        for (score, count, instance) in representation:
+            # str_output += "Counterfactual with score {} ({}) {}\n".format("%.4f" % score, count, instance)
+            str_output += "Counterfactual with score {} ({})\n".format("%.4f" % score, count)
+        return str_output
 
     def achieved_target(self):
         achieved_indexes = self._scores > MINIMUM_SCORE

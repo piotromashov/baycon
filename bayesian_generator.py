@@ -12,10 +12,10 @@ GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop 
 # 1st part with all __init__ stuff
 # 2nd with iteration of model
 # 3rd final check
-def run_generator(model, data_analyzer, initial_instance, target):
+def run(model, data_analyzer, initial_instance, target):
     # TODO: include logging library for logging
     print('-----Starting------')
-    print('model:', model, 'target:', target, 'template:', initial_instance)
+    print('model:', model, 'target:', target, 'initial instance:', initial_instance)
 
     t = time.process_time()
 
