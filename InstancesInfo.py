@@ -3,9 +3,11 @@ from collections import Counter
 
 import numpy as np
 
+import time_measurement
+
 SCORE_JITTER = 0.75  # giving search space for the solutions we are finding
 MINIMUM_SCORE = 0
-first_solution_time = False
+
 
 class InstancesInfo:
     # TODO: remove score and use distance
@@ -31,9 +33,8 @@ class InstancesInfo:
         scores = self._distance * targets_achieved
         self._scores = scores
 
-        global first_solution_time
-        if scores[scores > 0].any() and not first_solution_time:
-            first_solution_time = time.process_time()
+        if scores[scores > 0].any() and not time_measurement.first_solution_clock:
+            time_measurement.first_solution_clock = time.process_time()
 
     def __len__(self):
         return len(self._instances)
@@ -51,6 +52,8 @@ class InstancesInfo:
     def extend(self, instances_info):
         instances, distances, scores = instances_info.info()
         self._newBest = np.max(scores) > np.max(self._scores)
+        if self._newBest:
+            time_measurement.best_solution_clock = time.process_time()
         self._instances = np.concatenate((self._instances, instances))
         self._distance = np.concatenate((self._distance, distances), axis=None)
         self._scores = np.concatenate((self._scores, scores), axis=None)

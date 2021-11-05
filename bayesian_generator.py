@@ -1,8 +1,13 @@
+import time
+
+import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 
-from InstancesGenerator import *
-from InstancesInfo import *
-from SurrogateRanker import *
+import numpy_utils as npu
+import time_measurement
+from InstancesGenerator import InstancesGenerator
+from InstancesInfo import InstancesInfo
+from SurrogateRanker import SurrogateRanker
 
 EPOCHS_THRESHOLD = 50  # overall number of epochs to run the algorithm
 GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop without having improvements.
@@ -17,7 +22,7 @@ def run(model, data_analyzer, initial_instance, target):
     print('-----Starting------')
     print('model:', model, 'target:', target, 'initial instance:', initial_instance)
 
-    t = time.process_time()
+    init_time = time.process_time()
 
     surrogate_model = RandomForestRegressor(1000, n_jobs=4)
     ranker = SurrogateRanker(model, surrogate_model, initial_instance, data_analyzer, target)
@@ -63,7 +68,8 @@ def run(model, data_analyzer, initial_instance, target):
                 known_instances = globalInstancesInfo.instances()
                 instances_to_check = generator.generate_neighbours_arr(instances_near_best, known_instances)
                 promising_instances = npu.unique_concatenate(promising_instances, instances_to_check)
-                print("Neighbours; Generated ({}) Unique overall ({})".format(len(instances_to_check), len(promising_instances)))
+                print("Neighbours; Generated ({}) Unique overall ({})".format(len(instances_to_check),
+                                                                              len(promising_instances)))
             else:
                 instances_to_check = []
 
@@ -108,7 +114,8 @@ def run(model, data_analyzer, initial_instance, target):
     print("Promising pool: ({}) Found counterfactuals: ({})".format(len(promising_instances), achieved_target))
     globalInstancesInfo.extend(lastCheckInstancesInfo)
 
-    global first_solution_time
-    elapsed_time_to_first_solution = t - first_solution_time
+    time_measurement.time_to_first_solution = time_measurement.first_solution_clock - init_time
+    time_measurement.time_to_best_solution = time_measurement.best_solution_clock - init_time
+    time_measurement.total_time = time.process_time() - init_time
 
-    return globalInstancesInfo, elapsed_time_to_first_solution
+    return globalInstancesInfo
