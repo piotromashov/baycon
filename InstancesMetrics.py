@@ -1,6 +1,8 @@
+import json
 from collections import Counter
 
 import numpy as np
+import pandas as pd
 
 
 def count_and_sort(elements, reverse=False):
@@ -10,23 +12,38 @@ def count_and_sort(elements, reverse=False):
 
 
 class InstancesMetrics:
-    def __init__(self, initial_instance, counterfactuals, distance_calculator, ttfs, total_runtime):
-        self._initial_instance = initial_instance
-        self._similarity_scores = self.calculate_similarity(counterfactuals, distance_calculator)
-        self._features_changed = self.calculate_features_changed(counterfactuals)
-        self._ttfs = ttfs
-        self._total_runtime = total_runtime
+    def __init__(self, input_json_filename, distance_calculator):
+        with open(input_json_filename) as json_file:
+            data = json.load(json_file)
+            self._initial_instance = np.array(data["initial_instance"])
+            self._counterfactuals = np.array(data["counterfactuals"])
+            self._time_to_first_solution = data["time_to_first_solution"]
+            self._total_time = data["total_time"]
+
+        self._similarity_scores = self.calculate_similarity(self._counterfactuals, distance_calculator)
+        self._features_changed = self.calculate_features_changed(self._counterfactuals)
 
     def calculate_similarity(self, counterfactual, distance_calculator):
-        return np.around(1 - distance_calculator(self._initial_instance, counterfactual), 3)
+        return np.around(1 - distance_calculator(self._initial_instance, counterfactual), 4)
 
     def calculate_features_changed(self, counterfactuals):
         return [sum(counterfactual != self._initial_instance) for counterfactual in counterfactuals]
 
+    def to_csv(self, output_csv_filename):
+        df = pd.DataFrame({
+            'distance_x': self._similarity_scores,
+            'features_changed': self._features_changed,
+            'time_to_first_solution': self._time_to_first_solution,
+            'total_time': self._total_time
+        })
+        df.to_csv(output_csv_filename)
+
     def __str__(self):
         metrics_similarities = count_and_sort(self._similarity_scores, reverse=True)
         metrics_features_changed = count_and_sort(self._features_changed)
-        return str(metrics_similarities) + "\n" + \
-               str(metrics_features_changed) + "\n" + \
-               str(self._ttfs) + "\n" + \
-               str(self._total_runtime)
+        return "Distances: {}\nFeatures changed: {}\nTime to first solution: {}\nTotal Time: {}".format(
+            str(metrics_similarities),
+            str(metrics_features_changed),
+            str(self._time_to_first_solution),
+            str(self._total_time)
+        )

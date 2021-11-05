@@ -1,5 +1,3 @@
-import json
-
 import pandas as pd
 
 from DataAnalyzer import *
@@ -12,14 +10,20 @@ data = np.array(dataset.values[:, :-1])
 data_analyzer = DataAnalyzer(data)
 distance_calculator = data_analyzer.distance_calculator().gower
 
-algorithm_output_filename = "algorithm_output.json"
+filename = "algorithm_output"
+input_json_filename = filename + ".json"
+output_csv_filename = filename + ".csv"
 
-with open(algorithm_output_filename) as json_file:
-    data = json.load(json_file)
-    initial_instance = np.array(data["initial_instance"])
-    counterfactuals = np.array(data["counterfactuals"])
-    time_to_first_solution = data["time_to_first_solution"]
-    elapsed_time = data["total_time"]
-
-metrics = InstancesMetrics(initial_instance, counterfactuals, distance_calculator, time_to_first_solution, elapsed_time)
+metrics = InstancesMetrics(input_json_filename, distance_calculator)
 print(metrics)
+metrics.to_csv(output_csv_filename)
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+sns.set_theme(style="whitegrid")
+counterfactuals = pd.read_csv(output_csv_filename)
+ax = sns.boxplot(counterfactuals["distance_x"])
+plt.show()
+ax = sns.boxplot(counterfactuals["features_changed"])
+plt.show()
