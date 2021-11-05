@@ -1,24 +1,14 @@
-"""
-=========================================
-Using Counterfactual Prediction Explainer
-=========================================
-
-This example illustrates how to use the Counterfactual Prediction explainer
-(:class:`fatf.transparency.predictions.counterfactuals.\
-CounterfactualExplainer`) and how to interpret the 3-tuple that it returns by
-"textualising" it (:func:`fatf.transparency.predictions.counterfactuals.\
-textualise_counterfactuals`).
-"""
 # Author: Kacper Sokol <k.sokol@bristol.ac.uk>
 # License: new BSD
+import json
+import time
 
 import fatf.transparency.predictions.counterfactuals as fatf_cf
 import fatf.utils.data.datasets as fatf_datasets
-import fatf.utils.models as fatf_models
-import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 
-print(__doc__)
+from DataAnalyzer import *
 
 
 # The dataset file must be formatted in the *comma separated value* (*csv*)
@@ -45,28 +35,32 @@ def format_csv_fatf(file_name):
     # os.remove(file_name)
 
 
-csv_path = "../datasets/kc2.csv"
+def explain(counterfactuals):
+    # print('\nCounterfactuals for the data point:')
+    # pprint(dp_1_cfs)
+    data_analyzer = DataAnalyzer(X)
+    print("Generated counterfactuals {}".format(len(counterfactuals)))
+    distance_calculator = data_analyzer.distance_calculator()
+    print("1 - Gower distances")
+    for key, counterfactual in enumerate(counterfactuals):
+        score = 1 - distance_calculator.gower(initial_instance, np.array([counterfactual]))
+        print("Counterfactual with score {} (01) {}".format("%.4f" % score, counterfactual))
+
+
+csv_path = "../datasets/diabetes.csv"
 format_csv_fatf(csv_path)
 
 dataset = fatf_datasets.load_data(csv_path + ".mod")
 X = np.array(dataset['data'])
 Y = dataset['target']
+Y = np.array([1 if t == "tested_positive" else 0 for t in Y])
 
-# dataset = fatf_datasets.load_iris()
-# X = np.array(dataset['data'])
-# Y = dataset['target']
-
-# dataset = fetch_openml(name='kc2', version=1)
-# X = np.array(dataset['data'])
-# Y = dataset['target']
-
-# Train a model
-
-# clf = RandomForestClassifier()
-clf = fatf_models.KNN()
+clf = RandomForestClassifier()
+# clf = fatf_models.KNN()
 clf.fit(X, Y)
 
 # Create a Counterfactual Explainer
+t = time.process_time()
 cf_explainer = fatf_cf.CounterfactualExplainer(
     model=clf,
     dataset=X,
@@ -74,24 +68,24 @@ cf_explainer = fatf_cf.CounterfactualExplainer(
     default_numerical_step_size=0.1)
 
 # Select a data point to be explained
-dp_1_index = 3
-dp_1_X = X[dp_1_index, :]
-dp_1_y = Y[dp_1_index]
+initial_instance_index = 0
+initial_instance = X[initial_instance_index, :]
+initial_instance_prediction = Y[initial_instance_index]
 
 # Get a Counterfactual Explanation tuple for this data point
-print("initial instance: {}, output: {}".format(dp_1_X, dp_1_y))
-dp_1_cf_tuple = cf_explainer.explain_instance(dp_1_X)
-dp_1_cfs, dp_1_cfs_distances, dp_1_cfs_predictions = dp_1_cf_tuple
+print("initial instance: {}, output: {}".format(initial_instance, initial_instance_prediction))
+explanation_tuple = cf_explainer.explain_instance(initial_instance)
+total_time = time.process_time() - t
+counterfactuals, distances, predictions = explanation_tuple
 
-print("Generated counterfactuals {}".format(len(dp_1_cfs)))
-# print('\nCounterfactuals for the data point:')
-# pprint(dp_1_cfs)
+explain(counterfactuals)
 
-from DataAnalyzer import *
-
-data_analyzer = DataAnalyzer(X)
-distance_calculator = data_analyzer.distance_calculator()
-print("1 - Gower distances")
-for key, counterfactual in enumerate(dp_1_cfs):
-    score = 1 - distance_calculator.gower(dp_1_X, np.array([counterfactual]))
-    print("Counterfactual with score {} (01) {}".format("%.4f" % score, counterfactual))
+output = {
+    "initial_instance": initial_instance.tolist(),
+    "counterfactuals": counterfactuals.tolist(),
+    "time_to_first_solution": None,
+    "total_time": total_time
+}
+output_filename = "../fatf_output.json"
+with open(output_filename, 'w') as outfile:
+    json.dump(output, outfile)
