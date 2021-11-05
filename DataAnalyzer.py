@@ -2,7 +2,7 @@ from DistanceCalculator import *
 
 
 class DataAnalyzer:
-    def __init__(self, dataset, cat_features=False, feature_weights=None):
+    def __init__(self, dataset, cat_features=None, feature_weights=None):
         self._features_count = dataset.shape[1]
         self._min_values = np.min(dataset, axis=0)
         self._max_values = np.max(dataset, axis=0)
@@ -12,7 +12,7 @@ class DataAnalyzer:
         else:
             self._feature_weights = np.ones(self._features_count)
 
-        if cat_features:
+        if np.array(cat_features).any():
             self._categorical_features = cat_features
         else:
             self._categorical_features = np.zeros(self._features_count, dtype=bool)
