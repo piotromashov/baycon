@@ -1,7 +1,7 @@
 ### PI, EI and GP-UCB acquistion functions as described in [Brochu et al. 2010]
 
-import scipy
 import numpy
+import scipy
 
 
 def PI(muNew, stdNew, fMax, epsilon):

@@ -18,7 +18,7 @@ class InstancesInfo:
         self._target = target
         self._newBest = True
         self._instances = instances
-        self._distance = []
+        self._similarity_x = []
         self._scores = []
         self._distance_calculator = distance_calculator
         self.calculate_objective_all()
@@ -27,10 +27,10 @@ class InstancesInfo:
         # obtain model prediction on those values
         Y = np.array(self._model.predict(self._instances))
         # closeness to feature space of the potential counterfactual to the initial instance.
-        self._distance = 1 - self._distance_calculator.gower(self._initial_instance, self._instances)
+        self._similarity_x = 1 - self._distance_calculator.gower(self._initial_instance, self._instances)
         # if we are not moving towards the target, this is weighted as 0
-        targets_achieved = Y == self._target
-        scores = self._distance * targets_achieved
+        similarity_y = Y == self._target
+        scores = self._similarity_x * similarity_y
         self._scores = scores
 
         if scores[scores > 0].any() and not time_measurement.first_solution_clock:
@@ -41,7 +41,7 @@ class InstancesInfo:
 
     def best(self):
         index = np.argmax(self._scores)
-        return self._instances[index], self._distance[index], self._scores[index]
+        return self._instances[index], self._similarity_x[index], self._scores[index]
 
     def has_new_best(self):
         return self._newBest
@@ -55,12 +55,12 @@ class InstancesInfo:
         if self._newBest:
             time_measurement.best_solution_clock = time.process_time()
         self._instances = np.concatenate((self._instances, instances))
-        self._distance = np.concatenate((self._distance, distances), axis=None)
+        self._similarity_x = np.concatenate((self._similarity_x, distances), axis=None)
         self._scores = np.concatenate((self._scores, scores), axis=None)
 
     def __str__(self):
         achieved_indexes = self._scores > MINIMUM_SCORE
-        achieved_distances = self._distance[achieved_indexes]
+        achieved_distances = self._similarity_x[achieved_indexes]
         achieved_instances = self._instances[achieved_indexes]
 
         distances_counter = Counter(achieved_distances)
@@ -90,7 +90,7 @@ class InstancesInfo:
         return self._instances[near_best_index]
 
     def info(self):
-        return self._instances, self._distance, self._scores
+        return self._instances, self._similarity_x, self._scores
 
     def instances(self):
         return self._instances

@@ -6,7 +6,7 @@ from sklearn.preprocessing import KBinsDiscretizer
 
 import bayesian_generator as bcg_xai
 import time_measurement
-from DataAnalyzer import DataAnalyzer
+from common.DataAnalyzer import DataAnalyzer
 
 dataset_filename = "datasets/diabetes.csv"
 df = pd.read_csv(dataset_filename)
@@ -42,7 +42,7 @@ output = {
     "time_to_first_solution": time_measurement.time_to_first_solution,
     "time_to_best_solution": time_measurement.time_to_best_solution
 }
-output_filename = "algorithm_output.json"
+output_filename = "../algorithm_output.json"
 with open(output_filename, 'w') as outfile:
     json.dump(output, outfile)
 

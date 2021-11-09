@@ -1,4 +1,6 @@
-from DistanceCalculator import *
+import numpy as np
+
+from common.DistanceCalculator import DistanceCalculator
 
 
 class DataAnalyzer:
@@ -23,7 +25,7 @@ class DataAnalyzer:
         self._numerical_features = np.logical_not(self._categorical_features)
 
         # create ranges for features, numerical and categorical
-        ranges = np.array([0]*self._features_count)
+        ranges = np.array([0] * self._features_count)
         for i in range(len(ranges)):
             if not self._categorical_features[i]:
                 ranges[i] = self._max_values[i] - self._min_values[i] + 1
@@ -32,6 +34,9 @@ class DataAnalyzer:
 
     def distance_calculator(self):
         return self._distance_calculator
+
+    def instance_similarity_calculator(self):
+        return 1 - self.distance_calculator
 
     def min_feature_values(self):
         return self._min_values

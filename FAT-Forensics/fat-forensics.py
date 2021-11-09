@@ -8,7 +8,7 @@ import fatf.utils.data.datasets as fatf_datasets
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
-from DataAnalyzer import *
+from common.DataAnalyzer import *
 
 
 # The dataset file must be formatted in the *comma separated value* (*csv*)
@@ -47,7 +47,7 @@ def explain(counterfactuals):
         print("Counterfactual with score {} (01) {}".format("%.4f" % score, counterfactual))
 
 
-csv_path = "../datasets/diabetes.csv"
+csv_path = "datasets/diabetes.csv"
 format_csv_fatf(csv_path)
 
 dataset = fatf_datasets.load_data(csv_path + ".mod")
@@ -83,9 +83,8 @@ explain(counterfactuals)
 output = {
     "initial_instance": initial_instance.tolist(),
     "counterfactuals": counterfactuals.tolist(),
-    "time_to_first_solution": None,
     "total_time": total_time
 }
-output_filename = "../fatf_output.json"
+output_filename = "fatf_output.json"
 with open(output_filename, 'w') as outfile:
     json.dump(output, outfile)

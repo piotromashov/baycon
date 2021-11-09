@@ -1,10 +1,10 @@
 import pandas as pd
 
-from DataAnalyzer import *
 from InstancesMetrics import InstancesMetrics
+from common.DataAnalyzer import *
 
 # TODO: read from input path to dataset
-dataset_filename = "datasets/kc2.csv"
+dataset_filename = "datasets/diabetes.csv"
 dataset = pd.read_csv(dataset_filename)
 data = np.array(dataset.values[:, :-1])
 data_analyzer = DataAnalyzer(data)

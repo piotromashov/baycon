@@ -17,8 +17,9 @@ class InstancesMetrics:
             data = json.load(json_file)
             self._initial_instance = np.array(data["initial_instance"])
             self._counterfactuals = np.array(data["counterfactuals"])
-            self._time_to_first_solution = data["time_to_first_solution"]
             self._total_time = data["total_time"]
+            self._time_to_first_solution = data["time_to_first_solution"] if "time_to_first_solution" in data else None
+            self._time_to_best_solution = data["time_to_best_solution"] if "time_to_best_solution" in data else None
 
         self._similarity_scores = self.calculate_similarity(self._counterfactuals, distance_calculator)
         self._features_changed = self.calculate_features_changed(self._counterfactuals)
@@ -33,8 +34,9 @@ class InstancesMetrics:
         df = pd.DataFrame({
             'distance_x': self._similarity_scores,
             'features_changed': self._features_changed,
+            'total_time': self._total_time,
             'time_to_first_solution': self._time_to_first_solution,
-            'total_time': self._total_time
+            'time_to_best_solution': self._time_to_best_solution
         })
         df.to_csv(output_csv_filename)
 
