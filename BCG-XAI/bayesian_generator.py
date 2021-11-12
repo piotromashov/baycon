@@ -8,26 +8,23 @@ import time_measurement
 from InstancesGenerator import InstancesGenerator
 from InstancesInfo import InstancesInfo
 from SurrogateRanker import SurrogateRanker
+from common.SimilarityCalculator import SimilarityCalculator
+from common.Target import *
 
 EPOCHS_THRESHOLD = 50  # overall number of epochs to run the algorithm
 GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop without having improvements.
 
 
-# TODO: refactor into an object Bayesian.generate()
-# 1st part with all __init__ stuff
-# 2nd with iteration of model
-# 3rd final check
-def run(model, data_analyzer, initial_instance, target):
-    # TODO: include logging library for logging
+def run(initial_instance, initial_prediction, target: Target, data_analyzer, model):
     print('-----Starting------')
-    print('model:', model, 'target:', target, 'initial instance:', initial_instance)
+    print('model:', model, ', target:', str(target), ', initial instance:', initial_instance)
 
     init_time = time.process_time()
 
+    similarity_calculator = SimilarityCalculator(initial_instance, initial_prediction, target, data_analyzer)
     surrogate_model = RandomForestRegressor(1000, n_jobs=4)
     ranker = SurrogateRanker(model, surrogate_model, initial_instance, data_analyzer, target)
-    generator = InstancesGenerator(initial_instance, data_analyzer)
-    distance_calculator = data_analyzer.distance_calculator()
+    generator = InstancesGenerator(initial_instance, data_analyzer, similarity_calculator)
 
     # -- COUNTERS ---
     epoch_counter = 0
@@ -37,13 +34,13 @@ def run(model, data_analyzer, initial_instance, target):
 
     # --- BOOTSTRAP ---
     instances = generator.generate_initial_neighbours()
-    globalInstancesInfo = InstancesInfo(instances, model, initial_instance, distance_calculator, target)
-    instances, distances, scores = globalInstancesInfo.info()
+    globalInstancesInfo = InstancesInfo(instances, similarity_calculator, model)
+    instances, scores = globalInstancesInfo.info()
     ranker.update(instances, scores)
     ranker.train()
 
     promising_instances = np.array([], dtype=np.int64).reshape(0, initial_instance.shape[0])
-    best_instance, best_distance, best_score = globalInstancesInfo.best()
+    best_instance, best_score = globalInstancesInfo.best()
     best_epoch = 0
     # --- END BOOTSTRAP ---
 
@@ -76,7 +73,7 @@ def run(model, data_analyzer, initial_instance, target):
         # no new iteration instances to check, search random space within current best.
         if not len(instances_to_check) or not achieved_target:
             print("No new candidates, generating random")
-            instances_to_check = generator.generate_random(best_distance, globalInstancesInfo.instances())
+            instances_to_check = generator.generate_random(best_instance, globalInstancesInfo.instances())
             if not len(instances_to_check):
                 print("No new random were generated, retrying on next epoch")
                 continue
@@ -84,19 +81,19 @@ def run(model, data_analyzer, initial_instance, target):
 
         # rank aka acquisition function
         ranked_instances = ranker.rank(globalInstancesInfo.instances(), instances_to_check)
-        iterationInstancesInfo = InstancesInfo(ranked_instances, model, initial_instance, distance_calculator, target)
+        iterationInstancesInfo = InstancesInfo(ranked_instances, similarity_calculator, model)
         counterfactuals = iterationInstancesInfo.achieved_target_count()
         print("Predicted top: {} Counterfactuals: {}".format(len(ranked_instances), counterfactuals))
 
         # update known instances
         globalInstancesInfo.extend(iterationInstancesInfo)
         # update training data with known data
-        instances, _, scores = iterationInstancesInfo.info()
+        instances, scores = iterationInstancesInfo.info()
         ranker.update(instances, scores)
 
         # update new best instance, new best score, and oversample
         if globalInstancesInfo.has_new_best():
-            best_instance, best_distance, best_score = globalInstancesInfo.best()
+            best_instance, best_score = globalInstancesInfo.best()
             best_global_no_improvement_counter = 0
             best_epoch = epoch_counter
             print("New best found {}, with {}, oversampling".format(best_instance, "%.4f" % best_score))
@@ -109,7 +106,7 @@ def run(model, data_analyzer, initial_instance, target):
 
     # perform final check in instances
     print("--- Final check on promising alternatives ---")
-    lastCheckInstancesInfo = InstancesInfo(promising_instances, model, initial_instance, distance_calculator, target)
+    lastCheckInstancesInfo = InstancesInfo(promising_instances, similarity_calculator, model)
     achieved_target = lastCheckInstancesInfo.achieved_target_count()
     print("Promising pool: ({}) Found counterfactuals: ({})".format(len(promising_instances), achieved_target))
     globalInstancesInfo.extend(lastCheckInstancesInfo)

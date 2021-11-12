@@ -7,11 +7,11 @@ OVERSAMPLING_AMOUNT = 10
 
 
 class SurrogateRanker:
-    def __init__(self, objective_model, surrogate_model, initial_instance, distance_calculator, target):
+    def __init__(self, objective_model, surrogate_model, initial_instance, similarity_calculator, target):
         self._objective_model = objective_model
         self._surrogate_model = surrogate_model
         self._initial_instance = initial_instance
-        self._distance_calculator = distance_calculator
+        self._similarity_calculator = similarity_calculator
         self._target = target
         self._X = np.array([], dtype=np.int64).reshape(0, self._initial_instance.shape[0])
         self._Y = np.array([])
@@ -30,13 +30,9 @@ class SurrogateRanker:
         return self.opt_acquisition(known_instances, instances_to_check)
 
     def rank_with_objective(self, known_instances, instances_to_check):
-        Y = np.array(self._objective_model.predict(instances_to_check))
-        # closeness to feature space of the potential counterfactual to the initial instance.
-        similarity = 1 - self._distance_calculator.gower(self._initial_instance, instances_to_check)
-        # if we are not moving towards the target, this is weighted as 0
-        targets_achieved = Y == self._target
-        score = similarity * targets_achieved
-        sorted_index = np.argsort(score)
+        predictions = np.array(self._objective_model.predict(instances_to_check))
+        scores = self._similarity_calculator.calculate_score(instances_to_check, predictions)
+        sorted_index = np.argsort(scores)
         return instances_to_check[sorted_index][-TOP_RANKED:]
 
     # returns mean values and standard deviation calculated over the predictions
