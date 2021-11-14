@@ -9,17 +9,17 @@ MINIMUM_SCORE = 0
 
 
 class InstancesInfo:
-    def __init__(self, instances, similarity_calculator, model):
+    def __init__(self, instances, score_calculator, model):
         self._model = model
         self._newBest = True
         self._instances = instances
         self._scores = []
-        self._similarity_calculator = similarity_calculator
+        self._score_calculator = score_calculator
         self.calculate_objective_all()
 
     def calculate_objective_all(self):
         predictions = np.array(self._model.predict(self._instances))
-        self._scores = self._similarity_calculator.calculate_scores(self._instances, predictions)
+        self._scores = self._score_calculator.fitness_score(self._instances, predictions)
 
         if self._scores[self._scores > MINIMUM_SCORE].any() and not time_measurement.first_solution_clock:
             time_measurement.first_solution_clock = time.process_time()
@@ -71,7 +71,7 @@ class InstancesInfo:
         return instances, scores
 
     def near(self, score):
-        indexes = self._similarity_calculator.near_similarity(score, self._scores)
+        indexes = self._score_calculator.near_score(score, self._scores)
         return self._instances[indexes]
 
     def info(self):

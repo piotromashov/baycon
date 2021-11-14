@@ -4,20 +4,17 @@ import numpy_utils as npu
 
 
 class InstancesGenerator:
-    def __init__(self, template, data_analyzer, similarity_calculator):
+    def __init__(self, template, data_analyzer, score_calculator):
         self._initial_instance = template
-        # TODO: remove this min and max values
         self._min_values = data_analyzer.min_feature_values()
         self._max_values = data_analyzer.max_feature_values()
-        self._similarity_calculator = similarity_calculator
+        self._score_calculator = score_calculator
 
     def generate_random(self, best_instance, known_alternatives):
-        # TODO: move generation of samples into data_analyzer
-        # TODO: this generation could also include the best_instance as mean
         instances = npu.uniform_dist_sample(self._min_values, self._max_values)
         # remove samples that are same as the template
         instances = instances[np.sum(instances != self._initial_instance, axis=1) > 0]
-        instances = self._similarity_calculator.filter_instances_within_similarity(best_instance, instances)
+        instances = self._score_calculator.filter_instances_within_score(best_instance, instances)
         instances = npu.not_repeated(known_alternatives, instances)
         return instances
 
@@ -48,9 +45,9 @@ class InstancesGenerator:
         neighbours = npu.normal_dist_sample(means, sds, bottoms, tops)
 
         # remove all neighbours with distances that are bigger than current origin instance to the initial one
-        neighbour_similarities = self._similarity_calculator.similarity_x(origin_instance, neighbours)
-        similarity_from_origin_to_initial = self._similarity_calculator.similarity_x(self._initial_instance,
-                                                                                     np.array([origin_instance]))
-        neighbours = neighbours[neighbour_similarities >= similarity_from_origin_to_initial]
+        neighbour_scores_x = self._score_calculator.score_x(origin_instance, neighbours)
+        score_x_from_origin_to_initial = self._score_calculator.score_x(self._initial_instance,
+                                                                        np.array([origin_instance]))
+        neighbours = neighbours[neighbour_scores_x >= score_x_from_origin_to_initial]
         unique_neighbours = npu.not_repeated(known_alternatives, neighbours)
         return unique_neighbours

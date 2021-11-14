@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
 from common.DataAnalyzer import *
-from common.SimilarityCalculator import SimilarityCalculator
+from common.ScoreCalculator import ScoreCalculator
 from common.Target import Target
 
 
@@ -40,11 +40,11 @@ def format_csv_fatf(file_name):
 def calculate_scores(counterfactuals, predictions, target, X, Y):
     print("Generated counterfactuals {}".format(len(counterfactuals)))
     data_analyzer = DataAnalyzer(X, Y)
-    similarity_calculator = SimilarityCalculator(initial_instance, initial_prediction, target, data_analyzer)
-    print("Similarities")
+    score_calculator = ScoreCalculator(initial_instance, initial_prediction, target, data_analyzer)
+    print("Scores")
     scores = []
     for counterfactual, prediction in zip(counterfactuals, predictions):
-        score = similarity_calculator.calculate_scores(np.array([counterfactual]), np.array(prediction))
+        score = score_calculator.fitness_score(np.array([counterfactual]), np.array(prediction))
         print("Counterfactual with score {} (01) {}".format("%.3f" % score, counterfactual))
         scores.append(score)
     return scores

@@ -8,7 +8,7 @@ import time_measurement
 from InstancesGenerator import InstancesGenerator
 from InstancesInfo import InstancesInfo
 from SurrogateRanker import SurrogateRanker
-from common.SimilarityCalculator import SimilarityCalculator
+from common.ScoreCalculator import ScoreCalculator
 from common.Target import *
 
 EPOCHS_THRESHOLD = 50  # overall number of epochs to run the algorithm
@@ -21,10 +21,10 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
 
     init_time = time.process_time()
 
-    similarity_calculator = SimilarityCalculator(initial_instance, initial_prediction, target, data_analyzer)
+    score_calculator = ScoreCalculator(initial_instance, initial_prediction, target, data_analyzer)
     surrogate_model = RandomForestRegressor(1000, n_jobs=4)
     ranker = SurrogateRanker(model, surrogate_model, initial_instance, data_analyzer, target)
-    generator = InstancesGenerator(initial_instance, data_analyzer, similarity_calculator)
+    generator = InstancesGenerator(initial_instance, data_analyzer, score_calculator)
 
     # -- COUNTERS ---
     epoch_counter = 0
@@ -34,7 +34,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
 
     # --- BOOTSTRAP ---
     instances = generator.generate_initial_neighbours()
-    globalInstancesInfo = InstancesInfo(instances, similarity_calculator, model)
+    globalInstancesInfo = InstancesInfo(instances, score_calculator, model)
     instances, scores = globalInstancesInfo.info()
     ranker.update(instances, scores)
     ranker.train()
@@ -81,7 +81,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
 
         # rank aka acquisition function
         ranked_instances = ranker.rank(globalInstancesInfo.instances(), instances_to_check)
-        iterationInstancesInfo = InstancesInfo(ranked_instances, similarity_calculator, model)
+        iterationInstancesInfo = InstancesInfo(ranked_instances, score_calculator, model)
         counterfactuals = iterationInstancesInfo.achieved_target_count()
         print("Predicted top: {} Counterfactuals: {}".format(len(ranked_instances), counterfactuals))
 
@@ -106,7 +106,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
 
     # perform final check in instances
     print("--- Final check on promising alternatives ---")
-    lastCheckInstancesInfo = InstancesInfo(promising_instances, similarity_calculator, model)
+    lastCheckInstancesInfo = InstancesInfo(promising_instances, score_calculator, model)
     achieved_target = lastCheckInstancesInfo.achieved_target_count()
     print("Promising pool: ({}) Found counterfactuals: ({})".format(len(promising_instances), achieved_target))
     globalInstancesInfo.extend(lastCheckInstancesInfo)

@@ -4,7 +4,7 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 
-from common.SimilarityCalculator import SimilarityCalculator
+from common.ScoreCalculator import ScoreCalculator
 from common.Target import Target
 
 
@@ -27,20 +27,20 @@ class InstancesMetrics:
             self._time_to_first_solution = data["time_to_first_solution"] if "time_to_first_solution" in data else None
             self._time_to_best_solution = data["time_to_best_solution"] if "time_to_best_solution" in data else None
 
-        self._similarity_scores = self.calculate_similarities(data_analyzer)
+        self._scores = self.calculate_scores(data_analyzer)
         self._features_changed = self.calculate_features_changed(self._counterfactuals)
 
-    def calculate_similarities(self, data_analyzer):
-        similarity_calculator = SimilarityCalculator(self._initial_instance, self._initial_prediction, self._target,
-                                                     data_analyzer)
-        return np.around(similarity_calculator.calculate_scores(self._counterfactuals, self._predictions), 4)
+    def calculate_scores(self, data_analyzer):
+        score_calculator = ScoreCalculator(self._initial_instance, self._initial_prediction, self._target,
+                                           data_analyzer)
+        return np.around(score_calculator.fitness_score(self._counterfactuals, self._predictions), 4)
 
     def calculate_features_changed(self, counterfactuals):
         return [sum(counterfactual != self._initial_instance) for counterfactual in counterfactuals]
 
     def to_csv(self, output_csv_filename):
         df = pd.DataFrame({
-            'scores': self._similarity_scores,
+            'scores': self._scores,
             'features_changed': self._features_changed,
             'predictions': self._predictions,
             'total_time': self._total_time,
@@ -50,13 +50,13 @@ class InstancesMetrics:
         df.to_csv(output_csv_filename)
 
     def __str__(self):
-        metrics_similarities = count_and_sort(self._similarity_scores, reverse=True)
+        metrics_scores = count_and_sort(self._scores, reverse=True)
         metrics_features_changed = count_and_sort(self._features_changed)
         return "Scores: {}\n" \
                "Features changed: {}\n" \
                "Time to first solution: {}\n" \
                "Total Time: {}".format(
-            str(metrics_similarities),
+            str(metrics_scores),
             str(metrics_features_changed),
             str(self._time_to_first_solution),
             str(self._total_time)

@@ -1,8 +1,7 @@
 import numpy as np
 
 
-# TODO: change name to score calculator
-class SimilarityCalculator:
+class ScoreCalculator:
     SCORE_JITTER = 0.75
 
     def __init__(self, initial_instance, initial_prediction, target, data_analyzer):
@@ -13,11 +12,11 @@ class SimilarityCalculator:
         self._features_categorical = data_analyzer.categorical_features()
         self._weights = data_analyzer.feature_weights()
 
-    def calculate_scores(self, instances, predictions):
+    def fitness_score(self, instances, predictions):
         # calculate closeness of the potential counterfactual to the initial instance.
-        similarity_x = self.similarity_x(self._initial_instance, instances)
-        similarity_y = self.similarity_y(self._initial_prediction, predictions)
-        return similarity_x * similarity_y
+        score_x = self.score_x(self._initial_instance, instances)
+        score_y = self.score_y(self._initial_prediction, predictions)
+        return score_x * score_y
 
     # returns np.array of gower distances for each instance against the initial one
     def gower_distance(self, origin_instance, instances):
@@ -42,19 +41,19 @@ class SimilarityCalculator:
 
         return gowers
 
-    def similarity_x(self, from_instance, to_instances):
+    def score_x(self, from_instance, to_instances):
         return 1 - self.gower_distance(from_instance, to_instances)
 
-    def similarity_y(self, from_prediction, to_predictions):
+    def score_y(self, from_prediction, to_predictions):
         # TODO: calculate score on Y (based on type of target)
         return self._target.target_value() == to_predictions
 
-    def filter_instances_within_similarity(self, instance_from, instances_to_filter):
-        best_similarity = self.similarity_x(self._initial_instance, np.array([instance_from]))
-        similarities_to_check = self.similarity_x(self._initial_instance, instances_to_filter)
-        index = self.near_similarity(best_similarity, similarities_to_check)
+    def filter_instances_within_score(self, instance_from, instances_to_filter):
+        score_x_from_instance = self.score_x(self._initial_instance, np.array([instance_from]))
+        scores_to_check = self.score_x(self._initial_instance, instances_to_filter)
+        index = self.near_score(score_x_from_instance, scores_to_check)
         return instances_to_filter[index]
 
-    def near_similarity(self, similarity, similarities_to_check):
-        near_scores_index = similarity >= similarities_to_check * self.SCORE_JITTER
+    def near_score(self, score, scores_to_check):
+        near_scores_index = score >= scores_to_check * self.SCORE_JITTER
         return near_scores_index
