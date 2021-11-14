@@ -64,10 +64,11 @@ class InstancesInfo:
             str_output += "Counterfactual with score {} ({})\n".format(score, count)
         return str_output
 
-    def achieved_target(self):
+    def achieved_score(self):
         achieved_indexes = self._scores > MINIMUM_SCORE
-        achieved_instances = self._instances[achieved_indexes]
-        return achieved_instances
+        instances = self._instances[achieved_indexes]
+        scores = self._scores[achieved_indexes]
+        return instances, scores
 
     def near(self, score):
         indexes = self._similarity_calculator.near_similarity(score, self._scores)

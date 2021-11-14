@@ -27,8 +27,8 @@ instancesInfo = bcg_xai.run(initial_instance, initial_prediction, target, data_a
 
 print(instancesInfo)
 
-counterfactuals = instancesInfo.achieved_target()
-predictions = model.predict(instancesInfo.achieved_target())
+counterfactuals, scores = instancesInfo.achieved_score()
+predictions = model.predict(counterfactuals)
 output = {
     "initial_instance": initial_instance.tolist(),
     "initial_prediction": initial_prediction,
@@ -38,7 +38,9 @@ output = {
     "time_to_first_solution": time_measurement.time_to_first_solution,
     "time_to_best_solution": time_measurement.time_to_best_solution,
     "counterfactuals": counterfactuals.tolist(),
-    "predictions": predictions.tolist()
+    "predictions": predictions.tolist(),
+    "scores": scores.tolist()
+
 }
 output_filename = "algorithm_output.json"
 with open(output_filename, 'w') as outfile:

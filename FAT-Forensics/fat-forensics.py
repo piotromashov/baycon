@@ -9,6 +9,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
 from common.DataAnalyzer import *
+from common.SimilarityCalculator import SimilarityCalculator
 from common.Target import Target
 
 
@@ -36,16 +37,17 @@ def format_csv_fatf(file_name):
     # os.remove(file_name)
 
 
-def explain(counterfactuals, predictions, target, X, Y):
-    # print('\nCounterfactuals for the data point:')
-    # pprint(dp_1_cfs)
+def calculate_scores(counterfactuals, predictions, target, X, Y):
     print("Generated counterfactuals {}".format(len(counterfactuals)))
     data_analyzer = DataAnalyzer(X, Y)
     similarity_calculator = SimilarityCalculator(initial_instance, initial_prediction, target, data_analyzer)
     print("Similarities")
+    scores = []
     for counterfactual, prediction in zip(counterfactuals, predictions):
         score = similarity_calculator.calculate_scores(np.array([counterfactual]), np.array(prediction))
         print("Counterfactual with score {} (01) {}".format("%.3f" % score, counterfactual))
+        scores.append(score)
+    return scores
 
 
 csv_path = "datasets/diabetes.csv"
@@ -79,18 +81,21 @@ explanation_tuple = cf_explainer.explain_instance(initial_instance)
 total_time = time.process_time() - t
 counterfactuals, distances, predictions = explanation_tuple
 
-explain(counterfactuals, predictions, target, X, Y)
+scores = calculate_scores(counterfactuals, predictions, target, X, Y)
 
 clf_predictions = clf.predict(counterfactuals)
+print(predictions)
+print(clf_predictions)
 
 output = {
     "initial_instance": initial_instance.tolist(),
-    "initial_prediction": initial_prediction,
+    "initial_prediction": initial_prediction.tolist(),
     "target_type": target.target_type(),
     "target_value": target.target_value(),
     "total_time": total_time,
     "counterfactuals": counterfactuals.tolist(),
-    "predictions": clf_predictions.tolist()
+    "predictions": clf_predictions.tolist(),
+    "scores": scores
 }
 output_filename = "fatf_output.json"
 with open(output_filename, 'w') as outfile:
