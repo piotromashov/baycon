@@ -15,7 +15,7 @@ df = pd.read_csv(dataset_filename)
 X = df.values[:, :-1]
 Y = df.values[:, -1]
 
-data_analyzer = DataAnalyzer(X, Y)
+data_analyzer = DataAnalyzer(X, Y, target=target)
 
 initial_instance_index = 0
 initial_instance = X[initial_instance_index]
@@ -38,9 +38,7 @@ output = {
     "time_to_first_solution": time_measurement.time_to_first_solution,
     "time_to_best_solution": time_measurement.time_to_best_solution,
     "counterfactuals": counterfactuals.tolist(),
-    "predictions": predictions.tolist(),
-    "scores": scores.tolist()
-
+    "predictions": predictions.tolist()
 }
 output_filename = "algorithm_output.json"
 with open(output_filename, 'w') as outfile:

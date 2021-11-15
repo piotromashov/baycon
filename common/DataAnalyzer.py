@@ -1,18 +1,25 @@
 import numpy as np
 
+from common.Target import Target
 
-# TODO: add analysis of Y field (min_values, max_values)
+
 class DataAnalyzer:
-    def __init__(self, X, Y, cat_features=None, feature_weights=None):
-        self._features_count = X.shape[1]
-        self._min_values = np.min(X, axis=0)
-        self._max_values = np.max(X, axis=0)
+    def __init__(self, X, Y, target, cat_features=None, feature_weights=None):
+        self._analyze_x(X, cat_features, feature_weights)
+        self._analyze_y(Y, target)
 
-        if feature_weights:
+    def _analyze_x(self, X, cat_features, feature_weights):
+        self._features_count = X.shape[1]
+        self._X_min_values = np.min(X, axis=0)
+        self._X_max_values = np.max(X, axis=0)
+
+        # check if feature weights info have been provided, if not, infer it
+        if np.array(feature_weights).any():
             self._feature_weights = feature_weights
         else:
             self._feature_weights = np.ones(self._features_count)
 
+        # check if categorical features info have been provided, if not, infer it
         if np.array(cat_features).any():
             self._categorical_features = cat_features
         else:
@@ -27,13 +34,13 @@ class DataAnalyzer:
         self._feature_ranges = np.array([None] * self._features_count)
         for i in range(len(self._feature_ranges)):
             if not self._categorical_features[i]:
-                self._feature_ranges[i] = self._max_values[i] - self._min_values[i] + 1
+                self._feature_ranges[i] = self._X_max_values[i] - self._X_min_values[i] + 1
 
     def min_feature_values(self):
-        return self._min_values
+        return self._X_min_values
 
     def max_feature_values(self):
-        return self._max_values
+        return self._X_max_values
 
     def categorical_features(self):
         return self._categorical_features
@@ -44,8 +51,16 @@ class DataAnalyzer:
     def feature_weights(self):
         return self._feature_weights
 
-    def target_min_value(self):
-        pass
+    def _analyze_y(self, Y, target):
+        if target.target_type() is not Target.TYPE_CLASSIFICATION:
+            self._Y_min_values = np.min(Y, axis=0)
+            self._Y_max_values = np.max(Y, axis=0)
+        else:
+            self._Y_min_values = None
+            self._Y_max_values = None
 
-    def target_max_value(self):
-        pass
+    def prediction_min_value(self):
+        return self._Y_min_values
+
+    def prediction_max_value(self):
+        return self._Y_max_values
