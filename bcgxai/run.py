@@ -1,5 +1,6 @@
 import json
 
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
@@ -8,20 +9,36 @@ import time_measurement
 from common.DataAnalyzer import DataAnalyzer
 from common.Target import Target
 
-dataset_filename = "datasets/diabetes.csv"
-target = Target(target_type="classification", target_value="tested_negative")
+# dataset_filename = "datasets/diabetes.csv"
+# target = Target(target_type="classification", target_feature="class", target_value="tested_negative")
+# initial_instance_index = 0
+
+# dataset_filename = "datasets/kc2.csv"
+# target = Target(target_type="classification", target_feature="problems", target_value="no")
+# initial_instance_index = 4
+
+# dataset_filename = "datasets/pd_speech_features.csv"
+# target = Target(target_type="classification", target_feature="class", target_value=0)
+# initial_instance_index = 0
+
+dataset_filename = "datasets/house_sales.csv"
+target = Target(target_type="regression", target_feature="price", target_value="decrease")
+initial_instance_index = 0
+cat_features = ["waterfront", "date_year"]
 
 df = pd.read_csv(dataset_filename)
-X = df.values[:, :-1]
-Y = df.values[:, -1]
+data_analyzer = DataAnalyzer(df, target=target)
+X, Y = data_analyzer.split_dataset()
 
-data_analyzer = DataAnalyzer(X, Y, target=target)
-
-initial_instance_index = 0
 initial_instance = X[initial_instance_index]
 initial_prediction = Y[initial_instance_index]
 model = RandomForestClassifier()  # pluggable model that we train to explain.
-model.fit(X[initial_instance_index + 1:], Y[initial_instance_index + 1:])
+np.delete(X, initial_instance_index)
+np.delete(Y, initial_instance_index)
+print("Training model to explain")
+# model.fit(X, Y)
+model.fit(X[:200, :], Y[:200])
+print("Finished training")
 
 instancesInfo = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
 
@@ -34,6 +51,7 @@ output = {
     "initial_prediction": initial_prediction,
     "target_type": target.target_type(),
     "target_value": target.target_value(),
+    "target_feature": target.target_feature(),
     "total_time": time_measurement.total_time,
     "time_to_first_solution": time_measurement.time_to_first_solution,
     "time_to_best_solution": time_measurement.time_to_best_solution,

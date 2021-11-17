@@ -5,16 +5,18 @@ from common.Target import Target
 ZERO_VALUE = 0.1
 
 
-def score_y_away_from_target(min_value, predictions, max_value):
-    predictions_diff = np.abs(min_value - predictions)
-    total_diff = np.abs(min_value - max_value)
-    return (1 - np.divide(predictions_diff, total_diff)) * ZERO_VALUE
-
-
-def score_y_reaching_target(min_value, predictions, max_value):
-    predictions_diff = np.abs(predictions - min_value)
+def score_y_away_from_target(min_value, initial_prediction, predictions, max_value):
+    predictions_diff = np.abs(initial_prediction - predictions)
     total_diff = np.abs(max_value - min_value)
-    return np.divide(predictions_diff, total_diff)
+    result = (1 - np.divide(predictions_diff, total_diff)) * ZERO_VALUE
+    return result
+
+
+def score_y_reaching_target(min_value, initial_prediction, predictions, max_value):
+    predictions_diff = np.abs(predictions - initial_prediction)
+    total_diff = np.abs(max_value - min_value)
+    result = np.divide(predictions_diff, total_diff)
+    return result
 
 
 class ScoreCalculator:
@@ -30,7 +32,7 @@ class ScoreCalculator:
         # calculate closeness of the potential counterfactual to the initial instance.
         score_x = self.score_x(self._initial_instance, instances)
         score_y = self.score_y(predictions)
-        return score_x * score_y
+        return np.round(score_x * score_y, 3)
 
     # returns np.array of gower distances for each instance against the initial one
     def gower_distance(self, origin_instance, instances):
@@ -51,7 +53,7 @@ class ScoreCalculator:
             partial_gowers[:, feature_idx] = np.multiply(ij, feature_weight)
 
         sum_gowers = np.sum(partial_gowers, axis=1)
-        gowers = np.divide(sum_gowers, self._data_analyzer.feature_weights().sum())
+        gowers = np.divide(sum_gowers, sum(self._data_analyzer.feature_weights()))
 
         return gowers
 
@@ -61,7 +63,7 @@ class ScoreCalculator:
     def score_y(self, predictions_to_calculate):
         if self._target.target_type() == Target.TYPE_CLASSIFICATION:
             return self.calculate_classification_score_y(predictions_to_calculate)
-        if self._target.target_type == Target.TYPE_REGRESSION:
+        if self._target.target_type() == Target.TYPE_REGRESSION:
             return self.calculate_regression_score_y(predictions_to_calculate)
         if self._target.target_type() == Target.TYPE_RANGE:
             return self.calculate_ranged_score_y(predictions_to_calculate)
@@ -71,22 +73,22 @@ class ScoreCalculator:
 
     def calculate_regression_score_y(self, predictions):
         # calculate for each prediction if is greater or lower than the initial one
-        increase_index = self._initial_instance >= predictions
-        decrease_index = not increase_index
-        max_target_value = self._data_analyzer.prediction_max_value()
-        min_target_value = self._data_analyzer.prediction_min_value()
+        increase_index = predictions >= self._initial_prediction
+        decrease_index = np.invert(increase_index)
+        max_prediction = self._data_analyzer.prediction_max_value()
+        min_prediction = self._data_analyzer.prediction_min_value()
 
-        scores_y = np.array([], dtype=np.float).reshape(predictions.shape[0])
+        scores_y = np.array([0] * len(predictions), dtype=np.float)
         if self._target.target_value() == Target.REGRESSION_INCREASE:
             scores_y[increase_index] = score_y_reaching_target(
-                self._initial_instance, predictions[increase_index], max_target_value)
+                self._initial_prediction, self._initial_prediction, predictions[increase_index], max_prediction)
             scores_y[decrease_index] = score_y_away_from_target(
-                self._initial_prediction, predictions[decrease_index], min_target_value)
+                min_prediction, self._initial_prediction, predictions[decrease_index], self._initial_prediction)
         elif self._target.target_value() == Target.REGRESSION_DECREASE:
             scores_y[decrease_index] = score_y_reaching_target(
-                self._initial_instance, predictions[decrease_index], min_target_value)
+                min_prediction, self._initial_prediction, predictions[decrease_index], self._initial_prediction)
             scores_y[increase_index] = score_y_away_from_target(
-                self._initial_prediction, predictions[increase_index], max_target_value)
+                self._initial_prediction, self._initial_prediction, predictions[increase_index], max_prediction)
         return scores_y
 
     def calculate_ranged_score_y(self, predictions):

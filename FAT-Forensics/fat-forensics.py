@@ -1,6 +1,7 @@
 # Author: Kacper Sokol <k.sokol@bristol.ac.uk>
 # License: new BSD
 import json
+import os
 import time
 
 import fatf.transparency.predictions.counterfactuals as fatf_cf
@@ -17,7 +18,7 @@ from common.Target import Target
 #     standard with ``,`` used as the delimiter. The first row of the file must
 #     be a header formatted as follows:
 #     ``n_samples,n_features,class_name_1,class_name_2,...``
-def format_csv_fatf(file_name):
+def load_csv_fatf(file_name):
     dataset = pd.read_csv(csv_path)
     shapes = [dataset.shape[0], dataset.shape[1] - 1]
     target_column_name = dataset.columns[len(dataset.columns) - 1]
@@ -34,12 +35,15 @@ def format_csv_fatf(file_name):
         while i < len(data):
             write_obj.write(', '.join(str(e) for e in data[i]) + ', ' + target[i] + '\n')
             i += 1
-    # os.remove(file_name)
+    try:
+        dataset = fatf_datasets.load_data(modified_csv)
+    finally:
+        os.remove(modified_csv)
+    return dataset
 
 
-def calculate_scores(counterfactuals, predictions, target, X, Y):
+def calculate_scores(counterfactuals, predictions, target, data_analyzer):
     print("Generated counterfactuals {}".format(len(counterfactuals)))
-    data_analyzer = DataAnalyzer(X, Y)
     score_calculator = ScoreCalculator(initial_instance, initial_prediction, target, data_analyzer)
     print("Scores")
     scores = []
@@ -51,10 +55,13 @@ def calculate_scores(counterfactuals, predictions, target, X, Y):
 
 
 csv_path = "datasets/diabetes.csv"
-target = Target("classification", "tested_negative")
-format_csv_fatf(csv_path)
+target = Target("classification", "class", "tested_negative")
+initial_instance_index = 0
 
-dataset = fatf_datasets.load_data(csv_path + ".mod")
+dataset = load_csv_fatf(csv_path)
+dataframe = pd.read_csv(csv_path)
+data_analyzer = DataAnalyzer(dataframe, target)
+
 X = np.array(dataset['data'])
 Y = dataset['target']
 
@@ -71,7 +78,6 @@ cf_explainer = fatf_cf.CounterfactualExplainer(
     default_numerical_step_size=0.1)
 
 # Select a data point to be explained
-initial_instance_index = 0
 initial_instance = X[initial_instance_index]
 initial_prediction = Y[initial_instance_index]
 
@@ -81,7 +87,7 @@ explanation_tuple = cf_explainer.explain_instance(initial_instance)
 total_time = time.process_time() - t
 counterfactuals, distances, predictions = explanation_tuple
 
-scores = calculate_scores(counterfactuals, predictions, target, X, Y)
+scores = calculate_scores(counterfactuals, predictions, target, data_analyzer)
 
 clf_predictions = clf.predict(counterfactuals)
 print(predictions)
@@ -94,8 +100,7 @@ output = {
     "target_value": target.target_value(),
     "total_time": total_time,
     "counterfactuals": counterfactuals.tolist(),
-    "predictions": clf_predictions.tolist(),
-    "scores": scores
+    "predictions": clf_predictions.tolist()
 }
 output_filename = "fatf_output.json"
 with open(output_filename, 'w') as outfile:

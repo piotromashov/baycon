@@ -7,7 +7,7 @@ class Target:
     REGRESSION_INCREASE = REGRESSION_VALUES[0]
     REGRESSION_DECREASE = REGRESSION_VALUES[1]
 
-    def __init__(self, target_type, target_value):
+    def __init__(self, target_type, target_feature, target_value):
         assert target_type in self.TARGET_TYPES
         if target_type == self.TYPE_CLASSIFICATION:
             assert isinstance(target_value, int) or isinstance(target_value, str)
@@ -18,12 +18,16 @@ class Target:
             assert target_value in self.REGRESSION_VALUES
         self._target_value = target_value
         self._target_type = target_type
+        self._target_feature = target_feature
 
     def target_type(self):
         return self._target_type
 
     def target_value(self):
         return self._target_value
+
+    def target_feature(self):
+        return self._target_feature
 
     def __str__(self):
         return self._target_type + " " + str(self._target_value)
