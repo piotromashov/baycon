@@ -3,7 +3,7 @@ from collections import Counter
 
 import numpy as np
 
-import time_measurement
+import bcgxai.time_measurement as time_measurement
 
 MINIMUM_SCORE = 0
 

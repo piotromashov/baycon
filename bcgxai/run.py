@@ -2,10 +2,9 @@ import json
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
 
-import bayesian_generator as bcg_xai
-import time_measurement
+import bcgxai.bayesian_generator as bcg_xai
+import bcgxai.time_measurement as time_measurement
 from common.DataAnalyzer import DataAnalyzer
 from common.Target import Target
 
@@ -40,11 +39,8 @@ print("Training model to explain")
 model.fit(X[:200, :], Y[:200])
 print("Finished training")
 
-instancesInfo = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
+counterfactuals, scores = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
 
-print(instancesInfo)
-
-counterfactuals, scores = instancesInfo.achieved_score()
 predictions = model.predict(counterfactuals)
 output = {
     "initial_instance": initial_instance.tolist(),

@@ -1,6 +1,6 @@
 import numpy as np
 
-import numpy_utils as npu
+from common import numpy_utils as npu
 
 
 class InstancesGenerator:

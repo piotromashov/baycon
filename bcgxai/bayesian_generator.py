@@ -4,11 +4,11 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import LocalOutlierFactor
 
-import numpy_utils as npu
-import time_measurement
-from InstancesGenerator import InstancesGenerator
-from InstancesInfo import InstancesInfo
-from SurrogateRanker import SurrogateRanker
+import bcgxai.time_measurement as time_measurement
+from bcgxai.InstancesGenerator import InstancesGenerator
+from bcgxai.InstancesInfo import InstancesInfo
+from bcgxai.SurrogateRanker import SurrogateRanker
+from common import numpy_utils as npu
 from common.ScoreCalculator import ScoreCalculator
 from common.Target import *
 
