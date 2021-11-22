@@ -4,6 +4,7 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 
+from common.DataAnalyzer import DataAnalyzer
 from common.ScoreCalculator import ScoreCalculator
 from common.Target import Target
 
@@ -15,18 +16,19 @@ def count_and_sort(elements, reverse=False):
 
 
 class InstancesMetrics:
-    def __init__(self, input_json_filename, data_analyzer):
+    def __init__(self, dataframe, input_json_filename):
         with open(input_json_filename) as json_file:
             data = json.load(json_file)
             self._initial_instance = np.array(data["initial_instance"])
             self._initial_prediction = np.array(data["initial_prediction"])
-            self._target = Target(data["target_type"], data["target_value"])
+            self._target = Target(data["target_type"], data["target_feature"], data["target_value"])
             self._counterfactuals = np.array(data["counterfactuals"])
             self._predictions = np.array(data["predictions"])
             self._total_time = data["total_time"]
             self._time_to_first_solution = data["time_to_first_solution"] if "time_to_first_solution" in data else None
             self._time_to_best_solution = data["time_to_best_solution"] if "time_to_best_solution" in data else None
 
+        data_analyzer = DataAnalyzer(dataframe, self._target)
         self._scores = self.calculate_scores(data_analyzer)
         self._features_changed = self.calculate_features_changed(self._counterfactuals)
 

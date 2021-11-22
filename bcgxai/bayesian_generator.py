@@ -2,6 +2,7 @@ import time
 
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.neighbors import LocalOutlierFactor
 
 import numpy_utils as npu
 import time_measurement
@@ -15,6 +16,15 @@ EPOCHS_THRESHOLD = 50  # overall number of epochs to run the algorithm
 GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop without having improvements.
 
 
+# Remove out-of-distribution counterfactuals
+def filter_outliers(counterfactuals, scores, data_analyzer):
+    lof = LocalOutlierFactor(novelty=True)
+    X, _ = data_analyzer.split_dataset()
+    lof.fit(X)
+    counter_pred = lof.predict(counterfactuals)
+    return counterfactuals[counter_pred == 1], scores[counter_pred == 1]
+
+
 def run(initial_instance, initial_prediction, target: Target, data_analyzer, model):
     print('-----Starting------')
     print('model:', model, ', target:', str(target), ', initial instance:', initial_instance)
@@ -23,7 +33,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
 
     score_calculator = ScoreCalculator(initial_instance, initial_prediction, target, data_analyzer)
     surrogate_model = RandomForestRegressor(1000, n_jobs=4)
-    ranker = SurrogateRanker(model, surrogate_model, initial_instance, data_analyzer, target)
+    ranker = SurrogateRanker(model, surrogate_model, initial_instance, score_calculator, target)
     generator = InstancesGenerator(initial_instance, data_analyzer, score_calculator)
 
     # -- COUNTERS ---
@@ -111,8 +121,13 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     print("Promising pool: ({}) Found counterfactuals: ({})".format(len(promising_instances), achieved_target))
     globalInstancesInfo.extend(lastCheckInstancesInfo)
 
+    counterfactuals, scores = globalInstancesInfo.achieved_score()
+    print("Before filter: ", len(counterfactuals))
+    counterfactuals, scores = filter_outliers(counterfactuals, scores, data_analyzer)
+    print("After filter: ", len(counterfactuals))
+
     time_measurement.time_to_first_solution = time_measurement.first_solution_clock - init_time
     time_measurement.time_to_best_solution = time_measurement.best_solution_clock - init_time
     time_measurement.total_time = time.process_time() - init_time
 
-    return globalInstancesInfo
+    return counterfactuals, scores
