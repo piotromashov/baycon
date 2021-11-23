@@ -18,8 +18,8 @@ class SurrogateRanker:
         self._updated_train_achieved_target = False
 
     def train(self):
-        if not self._updated_train_achieved_target:
-            return
+        # if not self._updated_train_achieved_target:
+        #     return
         print("Re-training surrogate model with data size: {}".format(self._X.shape[0]))
         self._surrogate_model.fit(self._X, self._Y)
 

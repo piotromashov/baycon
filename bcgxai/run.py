@@ -44,13 +44,13 @@ counterfactuals, scores = bcg_xai.run(initial_instance, initial_prediction, targ
 predictions = model.predict(counterfactuals)
 output = {
     "initial_instance": initial_instance.tolist(),
-    "initial_prediction": initial_prediction,
+    "initial_prediction": str(initial_prediction),
     "target_type": target.target_type(),
     "target_value": target.target_value(),
     "target_feature": target.target_feature(),
-    "total_time": time_measurement.total_time,
-    "time_to_first_solution": time_measurement.time_to_first_solution,
-    "time_to_best_solution": time_measurement.time_to_best_solution,
+    "total_time": str(time_measurement.total_time),
+    "time_to_first_solution": str(time_measurement.time_to_first_solution),
+    "time_to_best_solution": str(time_measurement.time_to_best_solution),
     "counterfactuals": counterfactuals.tolist(),
     "predictions": predictions.tolist()
 }

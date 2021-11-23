@@ -18,6 +18,8 @@ GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop 
 
 # Remove out-of-distribution counterfactuals
 def filter_outliers(counterfactuals, scores, data_analyzer):
+    if not len(counterfactuals):
+        return counterfactuals, scores
     lof = LocalOutlierFactor(novelty=True)
     X, _ = data_analyzer.split_dataset()
     lof.fit(X)

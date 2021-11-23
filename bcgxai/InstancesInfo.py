@@ -15,6 +15,8 @@ class InstancesInfo:
         self._instances = instances
         self._scores = []
         self._score_calculator = score_calculator
+        if not len(instances):
+            return
         self.calculate_objective_all()
 
     def calculate_objective_all(self):
