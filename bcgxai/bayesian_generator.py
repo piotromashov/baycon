@@ -20,11 +20,15 @@ GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop 
 def filter_outliers(counterfactuals, scores, data_analyzer):
     if not len(counterfactuals):
         return counterfactuals, scores
+    print("Applying outlier filtering to instances: ", len(counterfactuals))
     lof = LocalOutlierFactor(novelty=True)
     X, _ = data_analyzer.split_dataset()
     lof.fit(X)
     counter_pred = lof.predict(counterfactuals)
-    return counterfactuals[counter_pred == 1], scores[counter_pred == 1]
+    counterfactuals = counterfactuals[counter_pred == 1]
+    scores = scores[counter_pred == 1]
+    print("After filter: ", len(counterfactuals))
+    return counterfactuals, scores
 
 
 def run(initial_instance, initial_prediction, target: Target, data_analyzer, model):
@@ -117,16 +121,14 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
         ranker.train()
 
     # perform final check in instances
-    print("--- Final check on promising alternatives ---")
+    print("--- Final check on promising alternatives {} ---".format(len(promising_instances)))
     lastCheckInstancesInfo = InstancesInfo(promising_instances, score_calculator, model)
     achieved_target = lastCheckInstancesInfo.achieved_target_count()
     print("Promising pool: ({}) Found counterfactuals: ({})".format(len(promising_instances), achieved_target))
     globalInstancesInfo.extend(lastCheckInstancesInfo)
 
     counterfactuals, scores = globalInstancesInfo.achieved_score()
-    print("Before filter: ", len(counterfactuals))
     counterfactuals, scores = filter_outliers(counterfactuals, scores, data_analyzer)
-    print("After filter: ", len(counterfactuals))
 
     time_measurement.time_to_first_solution = time_measurement.first_solution_clock - init_time
     time_measurement.time_to_best_solution = time_measurement.best_solution_clock - init_time

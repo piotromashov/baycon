@@ -13,7 +13,7 @@ class InstancesInfo:
         self._model = model
         self._newBest = True
         self._instances = instances
-        self._scores = []
+        self._scores = np.array([])
         self._score_calculator = score_calculator
         if not len(instances):
             return
@@ -41,7 +41,7 @@ class InstancesInfo:
 
     def extend(self, instances_info):
         instances, scores = instances_info.info()
-        self._newBest = np.max(scores) > np.max(self._scores)
+        self._newBest = len(scores) and np.max(scores) > np.max(self._scores)
         if self._newBest:
             time_measurement.best_solution_clock = time.process_time()
         self._instances = np.concatenate((self._instances, instances))

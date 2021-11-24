@@ -21,7 +21,7 @@ from common.Target import Target
 # initial_instance_index = 0
 
 dataset_filename = "datasets/house_sales.csv"
-target = Target(target_type="regression", target_feature="price", target_value="decrease")
+target = Target(target_type="regression", target_feature="price", target_value="increase")
 initial_instance_index = 0
 cat_features = ["waterfront", "date_year"]
 
@@ -57,4 +57,3 @@ output = {
 output_filename = "algorithm_output.json"
 with open(output_filename, 'w') as outfile:
     json.dump(output, outfile)
-
