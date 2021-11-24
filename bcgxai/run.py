@@ -8,6 +8,50 @@ import bcgxai.time_measurement as time_measurement
 from common.DataAnalyzer import DataAnalyzer
 from common.Target import Target
 
+
+class ModelWrapper:
+    def __init__(self, model, target):
+        self._target = target
+        self._model = model
+
+    def predict(self, instances):
+        try:
+            predictions = self._model.predict(instances)
+        except ValueError:
+            return np.array([0])
+        class_prediction = np.argmax(predictions, axis=1)
+        return class_prediction == target.target_value()
+
+
+def custom_model(dataset_filename, X, Y):
+    if dataset_filename != 'datasets/mnist.csv':
+        from sklearn.ensemble import RandomForestClassifier
+        model = RandomForestClassifier()
+        # model = KNeighborsClassifier()
+        print("Training model to explain")
+        model.fit(X, Y)
+        print("Finished training")
+        return model
+
+    # define black-box model
+    from keras.layers import Dense, Input
+    from keras.models import Model
+    num_classes = 10
+
+    # transform to tabular
+    # x_train = x_train.reshape(x_train.shape[0], 28 * 28)
+    _input = Input(shape=(X.shape[1],))
+    x = Dense(512)(_input)
+    x = Dense(512)(x)
+    output = Dense(num_classes, activation='softmax')(x)
+    model = Model(inputs=_input, outputs=output)
+    model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    # train the black-box model
+    # model.fit(X, Y, epochs=5, batch_size=2000)
+    model.fit(X, Y, epochs=5, batch_size=2000)
+    return ModelWrapper(model, target)
+
+
 # dataset_filename = "datasets/diabetes.csv"
 # target = Target(target_type="classification", target_feature="class", target_value="tested_negative")
 # initial_instance_index = 0
@@ -25,19 +69,20 @@ target = Target(target_type="regression", target_feature="price", target_value="
 initial_instance_index = 0
 cat_features = ["waterfront", "date_year"]
 
+# dataset_filename = "datasets/mnist.csv"
+# target = Target(target_type="classification", target_feature="class", target_value=9)
+# initial_instance_index = 0
+
+# load dataset, train model
 df = pd.read_csv(dataset_filename)
 data_analyzer = DataAnalyzer(df, target=target)
 X, Y = data_analyzer.split_dataset()
 
 initial_instance = X[initial_instance_index]
 initial_prediction = Y[initial_instance_index]
-model = RandomForestClassifier()  # pluggable model that we train to explain.
-np.delete(X, initial_instance_index)
-np.delete(Y, initial_instance_index)
-print("Training model to explain")
-# model.fit(X, Y)
-model.fit(X[:200, :], Y[:200])
-print("Finished training")
+# np.delete(Y, initial_instance_index)
+# np.delete(X, initial_instance_index)
+model = custom_model(dataset_filename, X, Y)
 
 counterfactuals, scores = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
 
