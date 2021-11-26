@@ -18,11 +18,13 @@ GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop 
 
 # Remove out-of-distribution counterfactuals
 def filter_outliers(counterfactuals, scores, data_analyzer):
+    print("--- Step 3: Filter outlier instances --- ")
     if not len(counterfactuals):
+        print("No counterfactuals found, skipping")
         return counterfactuals, scores
-    print("Applying outlier filtering to instances: ", len(counterfactuals))
+    print("Current count: {}".format(len(counterfactuals)))
     lof = LocalOutlierFactor(novelty=True)
-    X, _ = data_analyzer.split_dataset()
+    X, _ = data_analyzer.data()
     lof.fit(X)
     counter_pred = lof.predict(counterfactuals)
     counterfactuals = counterfactuals[counter_pred == 1]
@@ -33,7 +35,8 @@ def filter_outliers(counterfactuals, scores, data_analyzer):
 
 def run(initial_instance, initial_prediction, target: Target, data_analyzer, model):
     print('-----Starting------')
-    print('model:', model, ', target:', str(target), ', initial instance:', initial_instance)
+    print('model: {} target: {} initial instance: {} prediction: {}'
+          .format(model, str(target), initial_instance, initial_prediction))
 
     init_time = time.process_time()
 
