@@ -64,9 +64,10 @@ class ScoreCalculator:
         if self._target.target_type() == Target.TYPE_CLASSIFICATION:
             return self.calculate_classification_score_y(predictions_to_calculate)
         if self._target.target_type() == Target.TYPE_REGRESSION:
-            return self.calculate_regression_score_y(predictions_to_calculate)
-        if self._target.target_type() == Target.TYPE_RANGE:
-            return self.calculate_ranged_score_y(predictions_to_calculate)
+            if self._target.is_range():
+                return self.calculate_ranged_score_y(predictions_to_calculate)
+            else:
+                return self.calculate_regression_score_y(predictions_to_calculate)
 
     def calculate_classification_score_y(self, predictions):
         return self._target.target_value() == predictions
