@@ -5,15 +5,16 @@ from common.Target import Target
 ZERO_VALUE = 0.1
 
 
-def score_y_away_from_target(min_value, initial_prediction, predictions, max_value):
-    predictions_diff = np.abs(initial_prediction - predictions)
+def score_y_away_from_target(min_value, turning_point, predictions, max_value):
+    predictions_diff = np.abs(turning_point - predictions)
     total_diff = np.abs(max_value - min_value)
     result = (1 - np.divide(predictions_diff, total_diff)) * ZERO_VALUE
     return result
 
 
-def score_y_reaching_target(min_value, initial_prediction, predictions, max_value):
-    predictions_diff = np.abs(predictions - initial_prediction)
+# TODO: fix when it's at the minimum, it should return 0.1, not 0
+def score_y_reaching_target(min_value, turning_point, predictions, max_value):
+    predictions_diff = np.abs(predictions - turning_point)
     total_diff = np.abs(max_value - min_value)
     result = np.divide(predictions_diff, total_diff)
     return result
@@ -98,25 +99,27 @@ class ScoreCalculator:
         # if prediction is in range, then target achieved
         below_range_index = predictions < start_range
         over_range_index = predictions > end_range
-        in_range_index = not below_range_index and not over_range_index
+        in_range_index = np.logical_and(np.logical_not(below_range_index), np.logical_not(over_range_index))
 
-        scores_y = np.array([], dtype=np.float).reshape(predictions.shape[0])
+        scores_y = np.zeros(predictions.shape, dtype=np.float)
         scores_y[in_range_index] = 1
 
         # if prediction inside the delta slope, assign its score as the current difference divided by total difference
         delta_range_start = np.abs(self._initial_prediction - start_range)
         delta_range_end = np.abs(self._initial_prediction - end_range)
-        total_delta_slope = np.min(delta_range_start, delta_range_end)
+        delta_slope = np.min([delta_range_start, delta_range_end])
 
-        left_slope_boundary = start_range - total_delta_slope
-        right_slope_boundary = end_range + total_delta_slope
-        predictions_within_left_slope_index = left_slope_boundary >= predictions < start_range
-        predictions_within_right_slope_index = end_range > predictions <= right_slope_boundary
+        left_slope_boundary = start_range - delta_slope
+        right_slope_boundary = end_range + delta_slope
+        predictions_within_left_slope_index = np.logical_and(predictions >= left_slope_boundary,
+                                                             predictions < start_range)
+        predictions_within_right_slope_index = np.logical_and(predictions > end_range,
+                                                              predictions <= right_slope_boundary)
 
         scores_y[predictions_within_left_slope_index] = score_y_reaching_target(
-            left_slope_boundary, predictions[predictions_within_left_slope_index], start_range)
+            left_slope_boundary, left_slope_boundary, predictions[predictions_within_left_slope_index], start_range)
         scores_y[predictions_within_right_slope_index] = score_y_reaching_target(
-            right_slope_boundary, predictions[predictions_within_right_slope_index], end_range)
+            right_slope_boundary, right_slope_boundary, predictions[predictions_within_right_slope_index], end_range)
 
         # if prediction is outside range and delta slope, then apply penalized score
         outside_left_slope_index = predictions < left_slope_boundary
@@ -125,9 +128,11 @@ class ScoreCalculator:
         max_target_values = self._data_analyzer.prediction_max_value()
 
         scores_y[outside_left_slope_index] = score_y_away_from_target(
-            left_slope_boundary, predictions[outside_left_slope_index], min_target_values)
+            left_slope_boundary, left_slope_boundary, predictions[outside_left_slope_index], min_target_values)
         scores_y[outside_right_slope_index] = score_y_away_from_target(
-            right_slope_boundary, predictions[outside_right_slope_index], max_target_values)
+            right_slope_boundary, right_slope_boundary, predictions[outside_right_slope_index], max_target_values)
+
+        return scores_y
 
     def filter_instances_within_score(self, instance_from, instances_to_filter):
         score_x_from_instance = self.score_x(self._initial_instance, np.array([instance_from]))

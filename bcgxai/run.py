@@ -77,7 +77,7 @@ def prepare_model(dataset, X, Y):
 # cat_features = ["waterfront", "date_year"]
 
 dataset = "bike"
-target = Target(target_type="regression", target_feature="cnt", target_value=float("infinity"))
+target = Target(target_type="regression", target_feature="cnt", target_value=(1500, 2000))
 initial_instance_index = 0
 cat_features = ["season", "yr", "mnth", "holiday", "weekday", "workingday", "weathersit"]
 
