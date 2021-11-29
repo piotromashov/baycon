@@ -77,9 +77,9 @@ def prepare_model(dataset, X, Y):
 # cat_features = ["waterfront", "date_year"]
 
 dataset = "bike"
-target = Target(target_type="regression", target_feature="cnt", target_value=(1500, 2000))
+target = Target(target_type="regression", target_feature="cnt", target_value=float("infinity"))
 initial_instance_index = 0
-cat_features = []
+cat_features = ["season", "yr", "mnth", "holiday", "weekday", "workingday", "weathersit"]
 
 # dataset = "mnist"
 # target = Target(target_type="classification", target_feature="class", target_value=9)
@@ -97,6 +97,7 @@ initial_prediction = Y[initial_instance_index]
 model = prepare_model(dataset, X[:10000], Y[:10000])
 
 counterfactuals, scores = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
+# counterfactuals = data_analyzer.decode(counterfactuals)
 
 predictions = np.array([])
 try:

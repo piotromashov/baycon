@@ -2,9 +2,6 @@ import numpy as np
 import numpy.random as rnd
 from scipy.stats import truncnorm
 
-RANDOM_SAMPLE_SIZE = 1000
-NEIGHBOURS_SAMPLE_SIZE = 100
-
 
 def not_repeated(known_instances, new_instances):
     last_idx = len(known_instances) - 1
@@ -35,14 +32,16 @@ def get_truncated_normal(mean=0, sd=1, low=0, upp=10):
         (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd)
 
 
-def normal_dist_sample(means, sds, bottoms, tops):
+def normal_dist_sample(means, sds, bottoms, tops, sample_size):
     normal_distributions = [get_truncated_normal(means[k], sds[k], bottoms[k], tops[k]) for k in range(len(means))]
-    features = [np.round(nd.rvs(NEIGHBOURS_SAMPLE_SIZE)) for nd in normal_distributions]
+    return [np.round(nd.rvs(sample_size)) for nd in normal_distributions]
+
+
+def uniform_dist_sample(bottoms, tops, sample_size):
+    features = [np.floor(rnd.uniform(bottoms[k], tops[k] + 1, sample_size)) for k in range(len(bottoms))]
     samples = np.array(features).transpose()
     return samples
 
 
-def uniform_dist_sample(bottoms, tops):
-    features = [np.floor(rnd.uniform(bottoms[k], tops[k] + 1, RANDOM_SAMPLE_SIZE)) for k in range(len(bottoms))]
-    samples = np.array(features).transpose()
-    return samples
+def random_pick(column_values, sample_size):
+    return [np.random.choice(column_values[idx], sample_size) for idx in range(len(column_values))]

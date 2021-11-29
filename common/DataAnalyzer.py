@@ -19,7 +19,9 @@ class DataAnalyzer:
         self._categorical_features = [True if f in cat_features else False for f in self._features]
         # perform additional check for strings and treat them as categories as well
         for idx, f in enumerate(self._features):
-            if not np.issubdtype(type(self._dataframe[f][0]), np.number):
+            try:
+                float(self._dataframe[f][0])
+            except ValueError:
                 self._categorical_features[idx] = True
         self._numerical_features = np.logical_not(self._categorical_features)
 
@@ -27,7 +29,7 @@ class DataAnalyzer:
 
     def _analyze_dataframe(self):
         target_feature = self._target.target_feature()
-        self._Y = self._dataframe[[target_feature]].values.ravel()
+        self._Y = self._dataframe[[target_feature]].values
         self._X = self._dataframe.drop([target_feature], axis=1).values
         self._analyze_x()
         self._analyze_y()
@@ -38,14 +40,16 @@ class DataAnalyzer:
         X_max_values = np.max(self._X, axis=0)
 
         # categorical features shouldn't have minimum and maximum
-        self._X_min_values = [None if v else X_min_values[k] for k, v in enumerate(self._categorical_features)]
-        self._X_max_values = [None if v else X_max_values[k] for k, v in enumerate(self._categorical_features)]
+        self._X_min_values = np.array(
+            [None if v else X_min_values[k] for k, v in enumerate(self._categorical_features)])
+        self._X_max_values = np.array(
+            [None if v else X_max_values[k] for k, v in enumerate(self._categorical_features)])
 
         # create ranges for features, numerical and categorical
-        self._feature_ranges = np.array([None] * len(self._features))
-        for i in range(len(self._feature_ranges)):
-            if not self._categorical_features[i]:
-                self._feature_ranges[i] = self._X_max_values[i] - self._X_min_values[i] + 1
+        self._feature_ranges = np.array([None] * self._features_count)
+        for idx, is_categorical in enumerate(self._categorical_features):
+            if not is_categorical:
+                self._feature_ranges[idx] = self._X_max_values[idx] - self._X_min_values[idx] + 1
 
     def _analyze_y(self):
         if self._target.target_type() is not Target.TYPE_CLASSIFICATION:
@@ -56,10 +60,9 @@ class DataAnalyzer:
             self._Y_max = None
 
     def encode(self):
-        categorical_feature_names = self._features[self._categorical_features]
-        self._mcle = MultiColumnLabelEncoder(columns=categorical_feature_names).fit(self._dataframe)
-        self._dataframe = self._mcle.transform(self._dataframe)
-        self._analyze_dataframe()
+        self._mcle = MultiColumnLabelEncoder(self._categorical_features).fit(self._X)
+        self._X = self._mcle.transform(self._X)
+        self._analyze_x()
 
     def decode(self, samples):
         return self._mcle.inverse_transform(samples)
@@ -72,6 +75,15 @@ class DataAnalyzer:
 
     def max_feature_values(self):
         return self._X_max_values
+
+    def unique_categorical_values(self):
+        return [np.unique(c) for c in self._X[:, self._categorical_features].transpose()]
+
+    def features(self, columns=None):
+        if columns is not None:
+            # assert columns in self._features
+            return self._X[columns]
+        return self._features
 
     def categorical_features(self):
         return self._categorical_features
