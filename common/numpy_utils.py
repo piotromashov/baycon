@@ -43,5 +43,6 @@ def uniform_dist_sample(bottoms, tops, sample_size):
     return samples
 
 
-def random_pick(column_values, sample_size):
-    return [np.random.choice(column_values[idx], sample_size) for idx in range(len(column_values))]
+def random_pick(column_labels, sample_size):
+    column_values = [np.random.choice(column_labels[idx], sample_size) for idx in range(len(column_labels))]
+    return np.reshape(column_values, (len(column_values), sample_size))
