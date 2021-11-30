@@ -16,8 +16,8 @@ def score_y_away_from_target(min_value, turning_point, predictions, max_value):
 def score_y_reaching_target(min_value, turning_point, predictions, max_value):
     predictions_diff = np.abs(predictions - turning_point)
     total_diff = np.abs(max_value - min_value)
-    result = np.divide(predictions_diff, total_diff)
-    return result
+    normalized_scores = np.divide(predictions_diff, total_diff) * (1 - ZERO_VALUE) + ZERO_VALUE
+    return normalized_scores
 
 
 class ScoreCalculator:

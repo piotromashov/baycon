@@ -41,7 +41,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     init_time = time.process_time()
 
     score_calculator = ScoreCalculator(initial_instance, initial_prediction, target, data_analyzer)
-    surrogate_model = RandomForestRegressor(1000, n_jobs=4)
+    surrogate_model = RandomForestRegressor(1000, n_jobs=-1)
     ranker = SurrogateRanker(model, surrogate_model, initial_instance, score_calculator, target)
     generator = InstancesGenerator(initial_instance, data_analyzer, score_calculator)
 
