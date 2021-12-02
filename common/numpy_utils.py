@@ -39,8 +39,7 @@ def normal_dist_sample(means, sds, bottoms, tops, sample_size):
 
 def uniform_dist_sample(bottoms, tops, sample_size):
     features = [np.floor(rnd.uniform(bottoms[k], tops[k] + 1, sample_size)) for k in range(len(bottoms))]
-    samples = np.array(features).transpose()
-    return samples
+    return np.array(features)
 
 
 def random_pick(column_labels, sample_size):

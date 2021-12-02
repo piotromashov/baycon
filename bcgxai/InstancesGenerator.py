@@ -16,9 +16,24 @@ class InstancesGenerator:
         self._features = data_analyzer.features()
         self._score_calculator = score_calculator
 
+    # TODO: refactor generators, repeated code
     def generate_random(self, best_instance, known_alternatives):
-        instances = npu.uniform_dist_sample(self._min_values, self._max_values, self.UNIFORM_SAMPLE_SIZE)
-        # remove samples that are same as the template
+        # instances = npu.uniform_dist_sample(self._min_values, self._max_values, self.UNIFORM_SAMPLE_SIZE)
+
+        # obtain unique labels for each feature
+        features = np.zeros(shape=(len(self._numerical_features), self.UNIFORM_SAMPLE_SIZE))
+        features[self._numerical_features] = npu.uniform_dist_sample(
+            self._min_values[self._numerical_features],
+            self._max_values[self._numerical_features],
+            self.UNIFORM_SAMPLE_SIZE
+        )
+        # for each categorical feature: pick one randomly from its categories/labels
+        features[np.logical_not(self._numerical_features)] = npu.random_pick(
+            self._data_analyzer.unique_categorical_values(),
+            self.UNIFORM_SAMPLE_SIZE
+        )
+
+        instances = features.transpose()
         instances = instances[np.sum(instances != self._initial_instance, axis=1) > 0]
         instances = self._score_calculator.filter_instances_within_score(best_instance, instances)
         instances = npu.not_repeated(known_alternatives, instances)
