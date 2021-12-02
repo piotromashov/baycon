@@ -56,66 +56,82 @@ def prepare_model(dataset, X, Y):
     return ModelWrapper(model, target)
 
 
-# dataset = "diabetes"
-# target = Target(target_type="classification", target_feature="class", target_value="tested_negative")
-# initial_instance_index = 0
-# cat_features = []
+def execute(dataset, target, initial_instance_index, cat_features):
+    print("--- Executing {} II {} Target {}---".format(dataset, initial_instance_index, target))
+    # load dataset, train model
+    df = pd.read_csv("datasets/" + dataset + ".csv")
+    data_analyzer = DataAnalyzer(df, target=target, cat_features=cat_features)
+    data_analyzer.encode()
+    X, Y = data_analyzer.data()
 
-# dataset = "kc2"
-# target = Target(target_type="classification", target_feature="problems", target_value="no")
-# initial_instance_index = 4
-# cat_features = []
+    initial_instance = X[initial_instance_index]
+    initial_prediction = Y[initial_instance_index]
+    model = prepare_model(dataset, X[:10000], Y[:10000])
 
-# dataset = "pd_speech_features"
-# target = Target(target_type="classification", target_feature="class", target_value=0)
-# initial_instance_index = 0
-# cat_features = []
+    counterfactuals, scores = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
+    # counterfactuals = data_analyzer.decode(counterfactuals)
 
-# dataset = "house_sales"
-# target = Target(target_type="regression", target_feature="price", target_value=(200000, 300000))
-# initial_instance_index = 0
-# cat_features = ["waterfront", "date_year"]
+    predictions = np.array([])
+    try:
+        predictions = model.predict(counterfactuals)
+    except ValueError:
+        pass
+    output = {
+        "initial_instance": initial_instance.tolist(),
+        "initial_prediction": str(initial_prediction),
+        "target_type": target.target_type(),
+        "target_value": target.target_value(),
+        "target_feature": target.target_feature(),
+        "total_time": str(time_measurement.total_time),
+        "time_to_first_solution": str(time_measurement.time_to_first_solution),
+        "time_to_best_solution": str(time_measurement.time_to_best_solution),
+        "counterfactuals": counterfactuals.tolist(),
+        "predictions": predictions.tolist()
+    }
+
+    model_name = "RF"
+    run = "0"
+    target_value = target.target_value()
+    target_value = "{}-{}".format(target_value[0], target_value[1]) if isinstance(target_value, tuple) else str(
+        target_value)
+    output_filename = "{}_{}_{}_{}_{}_{}.json".format("bcg", dataset, initial_instance_index, model_name, target_value,
+                                                      run)
+    with open(output_filename, 'w') as outfile:
+        json.dump(output, outfile)
+
+
+# Classification
+dataset = "diabetes"
+target = Target(target_type="classification", target_feature="class", target_value="tested_negative")
+initial_instance_index = 0
+cat_features = []
+execute(dataset, target, initial_instance_index, cat_features)
+
+dataset = "kc2"
+target = Target(target_type="classification", target_feature="problems", target_value="no")
+initial_instance_index = 4
+cat_features = []
+execute(dataset, target, initial_instance_index, cat_features)
+#
+dataset = "pd_speech_features"
+target = Target(target_type="classification", target_feature="class", target_value=0)
+initial_instance_index = 0
+cat_features = []
+execute(dataset, target, initial_instance_index, cat_features)
+
+dataset = "house_sales"
+target = Target(target_type="regression", target_feature="price", target_value=(200000, 300000))
+initial_instance_index = 0
+cat_features = ["waterfront", "date_year"]
+execute(dataset, target, initial_instance_index, cat_features)
 
 dataset = "bike"
 target = Target(target_type="regression", target_feature="cnt", target_value=(1500, 2000))
 initial_instance_index = 0
 cat_features = ["season", "yr", "mnth", "holiday", "weekday", "workingday", "weathersit"]
+execute(dataset, target, initial_instance_index, cat_features)
 
 # dataset = "mnist"
 # target = Target(target_type="classification", target_feature="class", target_value=9)
 # initial_instance_index = 0
 # cat_features = []
-
-# load dataset, train model
-df = pd.read_csv("datasets/" + dataset + ".csv")
-data_analyzer = DataAnalyzer(df, target=target, cat_features=cat_features)
-data_analyzer.encode()
-X, Y = data_analyzer.data()
-
-initial_instance = X[initial_instance_index]
-initial_prediction = Y[initial_instance_index]
-model = prepare_model(dataset, X[:10000], Y[:10000])
-
-counterfactuals, scores = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
-# counterfactuals = data_analyzer.decode(counterfactuals)
-
-predictions = np.array([])
-try:
-    predictions = model.predict(counterfactuals)
-except ValueError:
-    pass
-output = {
-    "initial_instance": initial_instance.tolist(),
-    "initial_prediction": str(initial_prediction),
-    "target_type": target.target_type(),
-    "target_value": target.target_value(),
-    "target_feature": target.target_feature(),
-    "total_time": str(time_measurement.total_time),
-    "time_to_first_solution": str(time_measurement.time_to_first_solution),
-    "time_to_best_solution": str(time_measurement.time_to_best_solution),
-    "counterfactuals": counterfactuals.tolist(),
-    "predictions": predictions.tolist()
-}
-output_filename = "algorithm_output.json"
-with open(output_filename, 'w') as outfile:
-    json.dump(output, outfile)
