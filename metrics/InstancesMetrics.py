@@ -20,7 +20,7 @@ class InstancesMetrics:
         with open(input_json_filename) as json_file:
             data = json.load(json_file)
             self._initial_instance = np.array(data["initial_instance"])
-            self._initial_prediction = np.array(data["initial_prediction"])
+            self._initial_prediction = data["initial_prediction"]
             self._target = Target(data["target_type"], data["target_feature"], data["target_value"])
             self._counterfactuals = np.array(data["counterfactuals"])
             self._predictions = np.array(data["predictions"])
@@ -28,7 +28,13 @@ class InstancesMetrics:
             self._time_to_first_solution = data["time_to_first_solution"] if "time_to_first_solution" in data else None
             self._time_to_best_solution = data["time_to_best_solution"] if "time_to_best_solution" in data else None
 
+            try:
+                self._initial_prediction = float(self._initial_prediction)
+            except ValueError:
+                pass
+
         data_analyzer = DataAnalyzer(dataframe, self._target)
+        data_analyzer.encode()
         self._scores = self.calculate_scores(data_analyzer)
         self._features_changed = self.calculate_features_changed(self._counterfactuals)
 
