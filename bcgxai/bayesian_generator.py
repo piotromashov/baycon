@@ -10,8 +10,8 @@ from common import numpy_utils as npu
 from common.ScoreCalculator import ScoreCalculator
 from common.Target import *
 
-EPOCHS_THRESHOLD = 50  # overall number of epochs to run the algorithm
-GLOBAL_NO_IMPROVEMENT_THRESHOLD = 10  # improvement on amount of epochs to stop without having improvements.
+EPOCHS_THRESHOLD = 20  # overall number of epochs to run the algorithm
+GLOBAL_NO_IMPROVEMENT_THRESHOLD = 5  # improvement on amount of epochs to stop without having improvements.
 
 
 # Remove out-of-distribution counterfactuals
