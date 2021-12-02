@@ -1,4 +1,3 @@
-import time
 from collections import Counter
 
 import numpy as np
@@ -23,8 +22,8 @@ class InstancesInfo:
         predictions = np.array(self._model.predict(self._instances))
         self._scores = self._score_calculator.fitness_score(self._instances, predictions)
 
-        if self._scores[self._scores > MINIMUM_SCORE].any() and not time_measurement.first_solution_clock:
-            time_measurement.first_solution_clock = time.process_time()
+        if self._scores[self._scores > MINIMUM_SCORE].any():
+            time_measurement.first()
 
     def __len__(self):
         return len(self._instances)
@@ -43,7 +42,7 @@ class InstancesInfo:
         instances, scores = instances_info.info()
         self._newBest = len(scores) and np.max(scores) > np.max(self._scores)
         if self._newBest:
-            time_measurement.best_solution_clock = time.process_time()
+            time_measurement.best()
         self._instances = np.concatenate((self._instances, instances))
         self._scores = np.concatenate((self._scores, scores), axis=None)
 

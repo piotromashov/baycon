@@ -1,5 +1,3 @@
-import time
-
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import LocalOutlierFactor
@@ -38,7 +36,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     print('model: {} target: {} initial instance: {} prediction: {}'
           .format(model, str(target), initial_instance, initial_prediction))
 
-    init_time = time.process_time()
+    time_measurement.init()
 
     score_calculator = ScoreCalculator(initial_instance, initial_prediction, target, data_analyzer)
     surrogate_model = RandomForestRegressor(1000, n_jobs=-1)
@@ -119,7 +117,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
             ranker.oversample_update(best_instance, best_score)
 
         print("Known alternatives: {}".format(len(globalInstancesInfo)))
-        print("Best instance: {}, score {}, found on epoch: {}".format(best_instance, "%.4f" % best_score, best_epoch))
+        print("Best instance score {}, found on epoch: {}".format("%.4f" % best_score, best_epoch))
         # retrain surrogate model with updated training data
         ranker.train()
 
@@ -133,8 +131,6 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     counterfactuals, scores = globalInstancesInfo.achieved_score()
     counterfactuals, scores = filter_outliers(counterfactuals, scores, data_analyzer)
 
-    time_measurement.time_to_first_solution = time_measurement.first_solution_clock - init_time
-    time_measurement.time_to_best_solution = time_measurement.best_solution_clock - init_time
-    time_measurement.total_time = time.process_time() - init_time
+    time_measurement.finish()
 
     return counterfactuals, scores
