@@ -28,15 +28,22 @@ class InstancesMetrics:
             self._time_to_first_solution = data["time_to_first_solution"] if "time_to_first_solution" in data else None
             self._time_to_best_solution = data["time_to_best_solution"] if "time_to_best_solution" in data else None
 
+            # solve error if prediction is actually a number but was saved as string
             try:
                 self._initial_prediction = float(self._initial_prediction)
             except ValueError:
                 pass
 
-        data_analyzer = DataAnalyzer(dataframe, self._target)
-        data_analyzer.encode()
-        self._scores = self.calculate_scores(data_analyzer)
-        self._features_changed = self.calculate_features_changed(self._counterfactuals)
+        if len(self._counterfactuals) > 0:
+            data_analyzer = DataAnalyzer(dataframe, self._target)
+            data_analyzer.encode()
+            self._scores = self.calculate_scores(data_analyzer)
+            self._features_changed = self.calculate_features_changed(self._counterfactuals)
+        else:
+            import warnings
+            warnings.warn("Empty counterfactuals for {}".format(input_json_filename))
+            self._scores = []
+            self._features_changed = []
 
     def calculate_scores(self, data_analyzer):
         score_calculator = ScoreCalculator(self._initial_instance, self._initial_prediction, self._target,
