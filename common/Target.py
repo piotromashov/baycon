@@ -23,7 +23,8 @@ class Target:
         self._target_feature = target_feature
 
     def is_range(self):
-        return isinstance(self._target_value, tuple)
+        return (isinstance(self._target_value, tuple) or isinstance(self._target_value, list)) and len(
+            self._target_value) == 2
 
     def target_type(self):
         return self._target_type
@@ -35,4 +36,4 @@ class Target:
         return self._target_feature
 
     def __str__(self):
-        return self._target_type + " " + str(self._target_value)
+        return self._target_type + " " + self._target_feature + " " + str(self._target_value)
