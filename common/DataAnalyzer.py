@@ -29,15 +29,17 @@ class DataAnalyzer:
 
     def _analyze_dataframe(self):
         target_feature = self._target.target_feature()
-        self._Y = self._dataframe[[target_feature]].values
+        self._Y = self._dataframe[[target_feature]].values.ravel()
         self._X = self._dataframe.drop([target_feature], axis=1).values
         self._analyze_x()
         self._analyze_y()
 
     def _analyze_x(self):
         self._features_count = self._X.shape[1]
-        X_min_values = np.min(self._X, axis=0)
-        X_max_values = np.max(self._X, axis=0)
+        X_min_values = np.zeros(self._features_count)
+        X_max_values = np.zeros(self._features_count)
+        X_min_values[self._numerical_features] = np.quantile(self._X[:, self._numerical_features], 0.05, axis=0)
+        X_max_values[self._numerical_features] = np.quantile(self._X[:, self._numerical_features], 0.95, axis=0)
 
         # categorical features shouldn't have minimum and maximum
         self._X_min_values = np.array(
