@@ -37,32 +37,40 @@ class InstancesMetrics:
         if len(self._counterfactuals) > 0:
             data_analyzer = DataAnalyzer(dataframe, self._target)
             data_analyzer.encode()
-            self._scores = self.calculate_scores(data_analyzer)
+            self._scores, self._scores_x, self._scores_y, self._scores_f = self.calculate_scores(data_analyzer)
             self._features_changed = self.calculate_features_changed(self._counterfactuals)
         else:
             import warnings
             warnings.warn("Empty counterfactuals for {}".format(input_json_filename))
-            self._scores = []
+            self._scores, self._scores_x, self._scores_y, self._scores_f = [], [], [], []
             self._features_changed = []
+        print(self)
+        self.to_csv(input_json_filename)
 
     def calculate_scores(self, data_analyzer):
         score_calculator = ScoreCalculator(self._initial_instance, self._initial_prediction, self._target,
                                            data_analyzer)
-        return np.around(score_calculator.fitness_score(self._counterfactuals, self._predictions), 4)
+        return score_calculator.fitness_score(self._counterfactuals, self._predictions)
 
     def calculate_features_changed(self, counterfactuals):
         return [sum(counterfactual != self._initial_instance) for counterfactual in counterfactuals]
 
-    def to_csv(self, output_csv_filename):
+    def to_csv(self, input_json_filename):
         df = pd.DataFrame({
             'scores': self._scores,
+            'scores_x': self._scores_x,
+            'scores_y': self._scores_y,
+            'scores_f': self._scores_f,
             'features_changed': self._features_changed,
             'predictions': self._predictions,
             'total_time': self._total_time,
             'time_to_first_solution': self._time_to_first_solution,
             'time_to_best_solution': self._time_to_best_solution
         })
+        output_csv_filename = input_json_filename.split(".")[0] + ".csv"
         df.to_csv(output_csv_filename)
+        print("--- Finished: saved file {}".format(output_csv_filename))
+        return output_csv_filename
 
     def __str__(self):
         metrics_scores = count_and_sort(self._scores, reverse=True)
