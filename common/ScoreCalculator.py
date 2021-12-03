@@ -104,6 +104,10 @@ class ScoreCalculator:
 
     def calculate_ranged_score_y(self, predictions):
         start_range, end_range = self._target.target_value()
+        min_value = self._data_analyzer.prediction_min_value()
+        max_value = self._data_analyzer.prediction_max_value()
+        start_range = min_value if start_range < min_value else start_range
+        end_range = max_value if max_value < end_range else end_range
 
         # if prediction is in range, then target achieved
         below_range_index = predictions < start_range
