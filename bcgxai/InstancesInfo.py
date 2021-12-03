@@ -20,7 +20,7 @@ class InstancesInfo:
 
     def calculate_objective_all(self):
         predictions = np.array(self._model.predict(self._instances))
-        self._scores = self._score_calculator.fitness_score(self._instances, predictions)
+        self._scores, _, _, _ = self._score_calculator.fitness_score(self._instances, predictions)
 
         if self._scores[self._scores > MINIMUM_SCORE].any():
             time_measurement.first()
