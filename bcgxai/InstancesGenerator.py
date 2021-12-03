@@ -13,7 +13,6 @@ class InstancesGenerator:
         self._numerical_features = data_analyzer.numerical_features()
         self._min_values = data_analyzer.min_feature_values()
         self._max_values = data_analyzer.max_feature_values()
-        self._features = data_analyzer.features()
         self._score_calculator = score_calculator
 
     # TODO: refactor generators, repeated code

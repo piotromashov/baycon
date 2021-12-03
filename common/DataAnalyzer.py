@@ -81,10 +81,7 @@ class DataAnalyzer:
     def unique_categorical_values(self):
         return [np.unique(c) for c in self._X[:, self._categorical_features].transpose()]
 
-    def features(self, columns=None):
-        if columns is not None:
-            # assert columns in self._features
-            return self._X[columns]
+    def features(self):
         return self._features
 
     def categorical_features(self):
