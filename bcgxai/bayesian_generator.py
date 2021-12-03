@@ -10,8 +10,9 @@ from common import numpy_utils as npu
 from common.ScoreCalculator import ScoreCalculator
 from common.Target import *
 
-EPOCHS_THRESHOLD = 20  # overall number of epochs to run the algorithm
+EPOCHS_THRESHOLD = 50  # overall number of epochs to run the algorithm
 GLOBAL_NO_IMPROVEMENT_THRESHOLD = 5  # improvement on amount of epochs to stop without having improvements.
+MINIMUM_COUNTERFACTUALS_SIZE = 100
 
 
 # Remove out-of-distribution counterfactuals
@@ -32,9 +33,7 @@ def filter_outliers(counterfactuals, scores, data_analyzer):
 
 
 def run(initial_instance, initial_prediction, target: Target, data_analyzer, model):
-    print('-----Starting------')
-    print('model: {} target: {} initial instance: {} prediction: {}'
-          .format(model, str(target), initial_instance, initial_prediction))
+    print('--- Step 0: Load internal objects ---')
 
     time_measurement.init()
 
@@ -50,6 +49,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     # --- END COUNTERS ---
 
     # --- BOOTSTRAP ---
+    print('--- Step 1: Generate initial neighbours ---')
     instances = generator.generate_initial_neighbours()
     globalInstancesInfo = InstancesInfo(instances, score_calculator, model)
     instances, scores = globalInstancesInfo.info()
@@ -62,7 +62,11 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     # --- END BOOTSTRAP ---
 
     iterationInstancesInfo = globalInstancesInfo
-    while epoch_counter < EPOCHS_THRESHOLD and best_global_no_improvement_counter < GLOBAL_NO_IMPROVEMENT_THRESHOLD:
+    # keep searching until good amount of counterfactuals have been found
+    achieved_target_count = globalInstancesInfo.achieved_target_count()
+    print('--- Step 2: Explore neighbourhood ---')
+    while epoch_counter < EPOCHS_THRESHOLD and (
+            best_global_no_improvement_counter < GLOBAL_NO_IMPROVEMENT_THRESHOLD or achieved_target_count < MINIMUM_COUNTERFACTUALS_SIZE):
         print("--- epoch {} ----".format(epoch_counter + 1))
         # --- update counters ---
         best_global_no_improvement_counter += 1
@@ -82,17 +86,17 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
                 known_instances = globalInstancesInfo.instances()
                 instances_to_check = generator.generate_neighbours_arr(instances_near_best, known_instances)
                 promising_instances = npu.unique_concatenate(promising_instances, instances_to_check)
-                print("Neighbours; Generated ({}) Unique overall ({})".format(len(instances_to_check),
+                print("Generated neighbours: ({}) Unique overall ({})".format(len(instances_to_check),
                                                                               len(promising_instances)))
             else:
                 instances_to_check = []
 
         # no new iteration instances to check, search random space within current best.
         if not len(instances_to_check) or not achieved_target:
-            print("No new candidates, generating random")
+            print("No CF neighbours generated, generating random instances...")
             instances_to_check = generator.generate_random(best_instance, globalInstancesInfo.instances())
             if not len(instances_to_check):
-                print("No new random were generated, retrying on next epoch")
+                print("No random were generated, retrying on next epoch...")
                 continue
             print("Generated random instances: ({})".format(len(instances_to_check)))
 
@@ -120,12 +124,13 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
         print("Best instance score {}, found on epoch: {}".format("%.4f" % best_score, best_epoch))
         # retrain surrogate model with updated training data
         ranker.train()
+        achieved_target_count = globalInstancesInfo.achieved_target_count()
 
     # perform final check in instances
-    print("--- Final check on promising alternatives {} ---".format(len(promising_instances)))
+    print("--- Step 3: Final check on promising alternatives ({}) ---".format(len(promising_instances)))
     lastCheckInstancesInfo = InstancesInfo(promising_instances, score_calculator, model)
     achieved_target = lastCheckInstancesInfo.achieved_target_count()
-    print("Promising pool: ({}) Found counterfactuals: ({})".format(len(promising_instances), achieved_target))
+    print("From promising pool: ({}) Found counterfactuals: ({})".format(len(promising_instances), achieved_target))
     globalInstancesInfo.extend(lastCheckInstancesInfo)
 
     counterfactuals, scores = globalInstancesInfo.achieved_score()
