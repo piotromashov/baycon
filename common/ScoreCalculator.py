@@ -33,7 +33,9 @@ class ScoreCalculator:
         # calculate closeness of the potential counterfactual to the initial instance.
         score_x = self.score_x(self._initial_instance, instances)
         score_y = self.score_y(predictions)
-        return np.round(score_x * score_y, 3)
+        score_f = self.score_f(instances)
+        fitness_score = score_x * score_y * score_f
+        return np.round((fitness_score, score_x, score_y, score_f), 3)
 
     # returns np.array of gower distances for each instance against the initial one
     def gower_distance(self, origin_instance, instances):
@@ -69,6 +71,13 @@ class ScoreCalculator:
                 return self.calculate_ranged_score_y(predictions_to_calculate)
             else:
                 return self.calculate_regression_score_y(predictions_to_calculate)
+
+    def score_f(self, instances):
+        features_total = len(self._data_analyzer.features())
+        instances_differences = instances - self._initial_instance
+        changes_index = instances_differences == 0
+        features_equal_to_initial = np.sum(changes_index, axis=1)
+        return features_equal_to_initial / features_total
 
     def calculate_classification_score_y(self, predictions):
         return self._target.target_value() == predictions
