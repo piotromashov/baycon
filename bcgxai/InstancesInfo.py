@@ -4,7 +4,7 @@ import numpy as np
 
 import bcgxai.time_measurement as time_measurement
 
-MINIMUM_SCORE = 0.1
+MINIMUM_SCORE = 0
 
 
 class InstancesInfo:

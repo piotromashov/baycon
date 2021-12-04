@@ -20,7 +20,7 @@ class ModelWrapper:
         except ValueError:
             return np.array([0])
         class_prediction = np.argmax(predictions, axis=1)
-        return class_prediction == target.target_value()
+        return class_prediction == self._target.target_value()
 
 
 def prepare_model(dataset, model_name, X, Y, target_type):
@@ -217,7 +217,7 @@ execute("tecator", target, 86)
 target = Target(target_type="regression", target_feature="protein", target_value=(28.1375, float("inf")))
 execute("tecator", target, 2)
 
-## EXTRA MNIST DATASET
+# # EXTRA MNIST DATASET
 # dataset = "mnist"
 # target = Target(target_type="classification", target_feature="class", target_value=9)
 # initial_instance_index = 0
