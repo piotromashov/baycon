@@ -4,7 +4,7 @@ import numpy as np
 
 import bcgxai.time_measurement as time_measurement
 
-MINIMUM_SCORE = 0
+MINIMUM_SCORE_Y = 0.1
 
 
 class InstancesInfo:
@@ -13,6 +13,9 @@ class InstancesInfo:
         self._newBest = True
         self._instances = instances
         self._scores = np.array([])
+        self._scores_x = np.array([])
+        self._scores_y = np.array([])
+        self._scores_f = np.array([])
         self._score_calculator = score_calculator
         if not len(instances):
             return
@@ -20,34 +23,38 @@ class InstancesInfo:
 
     def calculate_objective_all(self):
         predictions = np.array(self._model.predict(self._instances))
-        self._scores, _, _, _ = self._score_calculator.fitness_score(self._instances, predictions)
+        self._scores, self._scores_x, self._scores_y, self._scores_f = self._score_calculator.fitness_score(
+            self._instances, predictions)
 
-        if self._scores[self._scores > MINIMUM_SCORE].any():
+        if self._scores_y[self._scores_y > MINIMUM_SCORE_Y].any():
             time_measurement.first()
 
     def __len__(self):
         return len(self._instances)
 
     def best(self):
-        index = np.argmax(self._scores)
-        return self._instances[index], self._scores[index]
+        id = np.argmax(self._scores)
+        return self._instances[id], self._scores[id], self._scores_x[id], self._scores_y[id], self._scores_f[id]
 
     def has_new_best(self):
         return self._newBest
 
     def achieved_target_count(self):
-        return np.count_nonzero(self._scores > MINIMUM_SCORE)
+        return np.count_nonzero(self._scores_y > MINIMUM_SCORE_Y)
 
     def extend(self, instances_info):
-        instances, scores = instances_info.info()
+        instances, scores, scores_x, scores_y, scores_f = instances_info.info()
         self._newBest = len(scores) and np.max(scores) > np.max(self._scores)
         if self._newBest:
             time_measurement.best()
         self._instances = np.concatenate((self._instances, instances))
         self._scores = np.concatenate((self._scores, scores), axis=None)
+        self._scores_x = np.concatenate((self._scores_x, scores_x), axis=None)
+        self._scores_y = np.concatenate((self._scores_y, scores_y), axis=None)
+        self._scores_f = np.concatenate((self._scores_f, scores_f), axis=None)
 
     def __str__(self):
-        achieved_indexes = self._scores > MINIMUM_SCORE
+        achieved_indexes = self._scores_y > MINIMUM_SCORE_Y
         achieved_scores = np.round(self._scores[achieved_indexes], 2)
         achieved_instances = self._instances[achieved_indexes]
 
@@ -60,23 +67,22 @@ class InstancesInfo:
             instance = achieved_instances[index]
             representation.append((score, count, instance))
 
-        str_output = "Generated counterfactuals {}\n".format(self.achieved_target_count())
+        str_output = "Generated counterfactuals {}\n".format(len(self.counterfactuals()))
         for (score, count, instance) in representation:
             str_output += "Counterfactual with score {} ({})\n".format(score, count)
         return str_output
 
-    def achieved_score(self):
-        achieved_indexes = self._scores > MINIMUM_SCORE
-        instances = self._instances[achieved_indexes]
-        scores = self._scores[achieved_indexes]
-        return instances, scores
+    def counterfactuals(self):
+        achieved_indexes = self._scores_y > MINIMUM_SCORE_Y
+        counterfactuals = self._instances[achieved_indexes]
+        return counterfactuals
 
     def near(self, score):
         indexes = self._score_calculator.near_score(score, self._scores)
         return self._instances[indexes]
 
     def info(self):
-        return self._instances, self._scores
+        return self._instances, self._scores, self._scores_x, self._scores_y, self._scores_f
 
     def instances(self):
         return self._instances

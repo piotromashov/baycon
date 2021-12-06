@@ -35,7 +35,7 @@ class ScoreCalculator:
         score_y = self.score_y(predictions)
         score_f = self.score_f(instances)
         fitness_score = score_x * score_y * score_f
-        return np.round((fitness_score, score_x, score_y, score_f), 3)
+        return np.round((fitness_score, score_x, score_y, score_f), 5)
 
     # returns np.array of gower distances for each instance against the initial one
     def gower_distance(self, origin_instance, instances):
@@ -52,7 +52,7 @@ class ScoreCalculator:
                 ones = np.ones_like(feature_values, dtype=int)
                 ij = np.where(feature_values == target, zeros, ones)
             else:
-                abs_delta = np.absolute(feature_values.astype(float) - target.astype(float))
+                abs_delta = np.absolute(feature_values.astype(float) - float(target))
                 feature_range = self._data_analyzer.feature_ranges()[feature_idx]
                 ij = np.divide(abs_delta, feature_range, out=np.zeros_like(abs_delta), where=feature_range != 0)
             partial_gowers[:, feature_idx] = np.multiply(ij, feature_weight)

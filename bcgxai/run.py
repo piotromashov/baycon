@@ -72,7 +72,7 @@ def execute(dataset, target, initial_instance_index, cat_features=[]):
             target.target_value(),
             model_name
         ))
-        counterfactuals, scores = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
+        counterfactuals = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
         # counterfactuals = data_analyzer.decode(counterfactuals)
 
         predictions = np.array([])
