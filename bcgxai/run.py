@@ -101,18 +101,30 @@ def execute(dataset, target, initial_instance_index, cat_features=[]):
 
 # --- BEGIN CLASSIFICATION EXPERIMENTS ---
 target = Target(target_type="classification", target_feature="class", target_value="tested_positive")
-for initial_instance_index in [1, 3, 5, 7, 10]:
-    execute("diabetes", target, initial_instance_index)
+execute("diabetes", target, 1)
+execute("diabetes", target, 3)
+execute("diabetes", target, 5)
+execute("diabetes", target, 7)
+execute("diabetes", target, 10)
 target = Target(target_type="classification", target_feature="class", target_value="tested_negative")
-for initial_instance_index in [0, 2, 4, 8, 9]:
-    execute("diabetes", target, initial_instance_index)
+execute("diabetes", target, 0)
+execute("diabetes", target, 2)
+execute("diabetes", target, 4)
+execute("diabetes", target, 8)
+execute("diabetes", target, 9)
 
 target = Target(target_type="classification", target_feature="problems", target_value="yes")
-for initial_instance_index in [9, 145, 252, 357, 413]:
-    execute("kc2", target, initial_instance_index)
+execute("kc2", target, 9)
+execute("kc2", target, 145)
+execute("kc2", target, 252)
+execute("kc2", target, 357)
+execute("kc2", target, 413)
 target = Target(target_type="classification", target_feature="problems", target_value="no")
-for initial_instance_index in [4, 421, 485, 496, 520]:
-    execute("kc2", target, initial_instance_index)
+execute("kc2", target, 4)
+execute("kc2", target, 421)
+execute("kc2", target, 485)
+execute("kc2", target, 496)
+execute("kc2", target, 520)
 
 # df = pd.read_csv("datasets/phpGUrE90.csv")
 # for column in df.columns:
@@ -122,23 +134,29 @@ for initial_instance_index in [4, 421, 485, 496, 520]:
 # #               "V26", "V29", "V32", "V33", "V34", "V35", "V38", "V40", "V41"]
 cat_features = []
 target = Target(target_type="classification", target_feature="Class", target_value=2)
-for initial_instance_index in [300, 511, 686, 950, 1024]:
-    execute("phpGUrE90", target, initial_instance_index, cat_features)
+execute("phpGUrE90", target, 300, cat_features)
+execute("phpGUrE90", target, 511, cat_features)
+execute("phpGUrE90", target, 686, cat_features)
+execute("phpGUrE90", target, 950, cat_features)
+execute("phpGUrE90", target, 1024, cat_features)
 target = Target(target_type="classification", target_feature="Class", target_value=1)
-for initial_instance_index in [9, 80, 145, 202, 257]:
-    execute("phpGUrE90", target, initial_instance_index, cat_features)
+execute("phpGUrE90", target, 9, cat_features)
+execute("phpGUrE90", target, 80, cat_features)
+execute("phpGUrE90", target, 145, cat_features)
+execute("phpGUrE90", target, 202, cat_features)
+execute("phpGUrE90", target, 257, cat_features)
 
-cat_features = ["gender"]
-target = Target(target_type="classification", target_feature="class", target_value=1)
-for initial_instance_index in [33, 72, 99, 195, 309]:
-    execute("parkinsonspeech", target, initial_instance_index, cat_features)
-target = Target(target_type="classification", target_feature="class", target_value=0)
-for initial_instance_index in [0, 40, 110, 230, 480]:
-    execute("parkinsonspeech", target, initial_instance_index, cat_features)
+# cat_features = ["gender"]
+# target = Target(target_type="classification", target_feature="class", target_value=1)
+# for initial_instance_index in [33, 72, 99, 195, 309]:
+#     execute("parkinsonspeech", target, initial_instance_index, cat_features)
+# target = Target(target_type="classification", target_feature="class", target_value=0)
+# for initial_instance_index in [0, 40, 110, 230, 480]:
+#     execute("parkinsonspeech", target, initial_instance_index, cat_features)
 
 # --- BEGIN REGRESSION EXPERIMENTS ---
 cat_features = ["season", "yr", "mnth", "holiday", "weekday", "workingday", "weathersit"]
-target = Target(target_type="regression", target_feature="cnt", target_value=(777, 1565))
+target = Target(target_type="regression", target_feature="cnt", target_value=[777, 1565])
 execute("bike", target, 96, cat_features)
 target = Target(target_type="regression", target_feature="cnt", target_value=(2184, 2972))
 execute("bike", target, 156, cat_features)
