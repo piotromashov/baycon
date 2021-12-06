@@ -10,4 +10,4 @@ __pycache__/
 log*
 *.ipynb
 .idea
-.sav
+*.sav
