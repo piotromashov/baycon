@@ -67,7 +67,7 @@ class InstancesMetrics:
             'time_to_first_solution': self._time_to_first_solution,
             'time_to_best_solution': self._time_to_best_solution
         })
-        output_csv_filename = input_json_filename.split(".")[0] + ".csv"
+        output_csv_filename = input_json_filename.split(".json")[0] + ".csv"
         df.to_csv(output_csv_filename)
         print("--- Finished: saved file {}".format(output_csv_filename))
         return output_csv_filename

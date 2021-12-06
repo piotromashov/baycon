@@ -48,9 +48,11 @@ class ScoreCalculator:
             feature_weight = self._data_analyzer.feature_weights()[feature_idx]
             # categorical or numerical, perform calculations accordingly
             if self._data_analyzer.categorical_features()[feature_idx]:
-                ij = np.where(feature_values == target, np.zeros_like(feature_values), np.ones_like(feature_values))
+                zeros = np.zeros_like(feature_values, dtype=int)
+                ones = np.ones_like(feature_values, dtype=int)
+                ij = np.where(feature_values == target, zeros, ones)
             else:
-                abs_delta = np.absolute(feature_values - target)
+                abs_delta = np.absolute(feature_values.astype(float) - target.astype(float))
                 feature_range = self._data_analyzer.feature_ranges()[feature_idx]
                 ij = np.divide(abs_delta, feature_range, out=np.zeros_like(abs_delta), where=feature_range != 0)
             partial_gowers[:, feature_idx] = np.multiply(ij, feature_weight)
@@ -74,9 +76,8 @@ class ScoreCalculator:
 
     def score_f(self, instances):
         features_total = len(self._data_analyzer.features())
-        instances_differences = instances - self._initial_instance
-        changes_index = instances_differences == 0
-        features_equal_to_initial = np.sum(changes_index, axis=1)
+        instances_differences = instances == self._initial_instance
+        features_equal_to_initial = np.sum(instances_differences, axis=1)
         return features_equal_to_initial / features_total
 
     def calculate_classification_score_y(self, predictions):
