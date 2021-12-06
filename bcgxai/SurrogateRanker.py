@@ -4,22 +4,21 @@ import bcgxai.acquisition_functions as acq_functions
 
 TOP_RANKED = 20
 OVERSAMPLING_AMOUNT = 10
+AGREGATED_FEATURES = 2
 
 
 class SurrogateRanker:
-    def __init__(self, objective_model, surrogate_model, initial_instance, score_calculator, target):
+    def __init__(self, objective_model, surrogate_model, initial_X, score_calculator, target):
         self._objective_model = objective_model
         self._surrogate_model = surrogate_model
-        self._initial_instance = initial_instance
-        self._score_calculator = score_calculator
+        self._initial_X = initial_X
+        # self._score_calculator = score_calculator
         self._target = target
-        self._X = np.array([], dtype=np.int64).reshape(0, self._initial_instance.shape[0])
+        # two features more for feature changes and total_difference
+        self._X = np.empty(shape=(0, self._initial_X.shape[0] + AGREGATED_FEATURES))
         self._Y = np.array([])
-        self._updated_train_achieved_target = False
 
     def train(self):
-        # if not self._updated_train_achieved_target:
-        #     return
         print("Re-training surrogate model with data size: {}".format(self._X.shape[0]))
         self._surrogate_model.fit(self._X, self._Y)
 
@@ -27,13 +26,16 @@ class SurrogateRanker:
         return self._surrogate_model
 
     def rank(self, known_instances, instances_to_check):
-        return self.opt_acquisition(known_instances, instances_to_check)
+        known_X = self.prepare_x(known_instances)
+        X_to_check = self.prepare_x(instances_to_check)
+        _, index = self.opt_acquisition(known_X, X_to_check)
+        return instances_to_check[index]
 
-    def rank_with_objective(self, known_instances, instances_to_check):
-        predictions = np.array(self._objective_model.predict(instances_to_check))
-        scores = self._score_calculator.calculate_score(instances_to_check, predictions)
-        sorted_index = np.argsort(scores)
-        return instances_to_check[sorted_index][-TOP_RANKED:]
+    # def rank_with_objective(self, known_instances, instances_to_check):
+    #     predictions = np.array(self._objective_model.predict(instances_to_check))
+    #     scores = self._score_calculator.calculate_score(instances_to_check, predictions)
+    #     sorted_index = np.argsort(scores)
+    #     return instances_to_check[sorted_index][-TOP_RANKED:]
 
     # returns mean values and standard deviation calculated over the predictions
     # from each separate model from a given ensemble models
@@ -62,14 +64,21 @@ class SurrogateRanker:
         # locate the index of the largest scores
         top_ranked = len(scores) if TOP_RANKED > len(scores) else TOP_RANKED
         best_alternatives_index = np.argpartition(scores, -top_ranked)[-top_ranked:]  # get top_n candidates
-        return instances_to_check[best_alternatives_index].copy()
+        return instances_to_check[best_alternatives_index].copy(), best_alternatives_index
 
-    def update(self, instances, scores):
-        self._X = np.concatenate((self._X, instances))
-        self._Y = np.concatenate((self._Y, scores), axis=None)
-        self._updated_train_achieved_target = len(scores[scores > 0]) > 0
+    def prepare_x(self, X):
+        differences = X - self._initial_X
+        differences_sum = np.sum(np.abs(differences), axis=1)
+        features_equal_to_initial = np.sum(X == self._initial_X, axis=1)
+        similarity_and_differences = np.array([differences_sum, features_equal_to_initial]).transpose()
+        surrogate_X = np.concatenate((differences, similarity_and_differences), axis=1)
+        return surrogate_X
 
-    def oversample_update(self, instance, score):
-        oversampled_instance = np.repeat([instance], OVERSAMPLING_AMOUNT, axis=0)
-        oversampled_score = np.repeat(score, OVERSAMPLING_AMOUNT)
-        self.update(oversampled_instance, oversampled_score)
+    def update(self, X, Y):
+        self._X = np.concatenate((self._X, self.prepare_x(X)))
+        self._Y = np.concatenate((self._Y, Y), axis=None)
+
+    def oversample_update(self, X, Y):
+        oversampled_X = np.repeat([X], OVERSAMPLING_AMOUNT, axis=0)
+        oversampled_Y = np.repeat(Y, OVERSAMPLING_AMOUNT)
+        self.update(oversampled_X, oversampled_Y)

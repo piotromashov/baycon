@@ -55,7 +55,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     ranker.update(instances, scores)
     ranker.train()
 
-    promising_instances = np.array([], dtype=np.int64).reshape(0, initial_instance.shape[0])
+    promising_instances = np.empty(shape=(0, initial_instance.shape[0]))
     best_instance, best_score, best_score_x, best_score_y, best_score_f = globalInstancesInfo.best()
     best_epoch = 0
     # --- END BOOTSTRAP ---
