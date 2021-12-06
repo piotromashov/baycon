@@ -7,22 +7,25 @@ class Target:
     REGRESSION_INCREASE = REGRESSION_VALUES[1]
 
     def __init__(self, target_type, target_feature, target_value):
+        self._target_type = target_type
+        self._target_value = target_value
+        self._target_feature = target_feature
+
         assert target_type in self.TARGET_TYPES
         if target_type == self.TYPE_CLASSIFICATION:
             assert isinstance(target_value, int) or isinstance(target_value, str)
         elif target_type == self.TYPE_REGRESSION:
-            self._target_value = target_value
             if self.is_range():
-                assert target_value[0] < target_value[1]
+                self._target_value[0] = float(self._target_value[0])
+                self._target_value[1] = float(self._target_value[1])
+                assert self._target_value[0] < self._target_value[1]
             else:
-                target_value = float(target_value)
-                assert target_value in self.REGRESSION_VALUES
-
-        self._target_value = target_value
-        self._target_type = target_type
-        self._target_feature = target_feature
+                self._target_value = float(self._target_value)
+                assert self._target_value in self.REGRESSION_VALUES
 
     def is_range(self):
+        if "," in self._target_value:
+            self._target_value = self._target_value.split(",")
         return (isinstance(self._target_value, tuple) or isinstance(self._target_value, list)) and len(
             self._target_value) == 2
 
