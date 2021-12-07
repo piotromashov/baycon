@@ -4,7 +4,7 @@ import bcgxai.acquisition_functions as acq_functions
 
 TOP_RANKED = 20
 OVERSAMPLING_AMOUNT = 10
-AGREGATED_FEATURES = 2
+AGGREGATED_FEATURES = 2
 
 
 class SurrogateRanker:
@@ -15,7 +15,7 @@ class SurrogateRanker:
         # self._score_calculator = score_calculator
         self._target = target
         # two features more for feature changes and total_difference
-        self._X = np.empty(shape=(0, self._initial_X.shape[0] + AGREGATED_FEATURES))
+        self._X = np.empty(shape=(0, self._initial_X.shape[0] + AGGREGATED_FEATURES))
         self._Y = np.array([])
 
     def train(self):

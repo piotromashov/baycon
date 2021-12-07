@@ -34,11 +34,11 @@ def get_truncated_normal(mean=0, sd=1, low=0, upp=10):
 
 def normal_dist_sample(means, sds, bottoms, tops, sample_size):
     normal_distributions = [get_truncated_normal(means[k], sds[k], bottoms[k], tops[k]) for k in range(len(means))]
-    return [np.round(nd.rvs(sample_size)) for nd in normal_distributions]
+    return np.array([nd.rvs(sample_size) for nd in normal_distributions])
 
 
 def uniform_dist_sample(bottoms, tops, sample_size):
-    features = [np.floor(rnd.uniform(bottoms[k], tops[k] + 1, sample_size)) for k in range(len(bottoms))]
+    features = [rnd.uniform(bottoms[k], tops[k] + 1, sample_size) for k in range(len(bottoms))]
     return np.array(features)
 
 

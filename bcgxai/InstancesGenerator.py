@@ -6,31 +6,21 @@ from common import numpy_utils as npu
 class InstancesGenerator:
     NEIGHBOURS_SAMPLE_SIZE = 100
     UNIFORM_SAMPLE_SIZE = 1000
+    ROUNDING = 0.01
 
-    def __init__(self, template, data_analyzer, score_calculator):
-        self._initial_instance = template
+    def __init__(self, initial_instance, data_analyzer, score_calculator):
+        self._initial_instance = initial_instance
         self._data_analyzer = data_analyzer
         self._numerical_features = data_analyzer.numerical_features()
         self._min_values = data_analyzer.min_feature_values()
         self._max_values = data_analyzer.max_feature_values()
         self._score_calculator = score_calculator
 
-    # TODO: refactor generators, repeated code
     def generate_random(self, best_instance, known_alternatives):
-        # instances = npu.uniform_dist_sample(self._min_values, self._max_values, self.UNIFORM_SAMPLE_SIZE)
-
-        # obtain unique labels for each feature
         features = np.zeros(shape=(len(self._numerical_features), self.UNIFORM_SAMPLE_SIZE))
-        features[self._numerical_features] = npu.uniform_dist_sample(
-            self._min_values[self._numerical_features],
-            self._max_values[self._numerical_features],
-            self.UNIFORM_SAMPLE_SIZE
-        )
-        # for each categorical feature: pick one randomly from its categories/labels
-        features[np.logical_not(self._numerical_features)] = npu.random_pick(
-            self._data_analyzer.unique_categorical_values(),
-            self.UNIFORM_SAMPLE_SIZE
-        )
+        features[self._numerical_features] = self.rounded_numerical_samples_uniform(self.UNIFORM_SAMPLE_SIZE)
+        categorical_features = np.logical_not(self._numerical_features)
+        features[categorical_features] = self.categorical_samples_uniform(self.UNIFORM_SAMPLE_SIZE)
 
         instances = features.transpose()
         instances = instances[np.sum(instances != self._initial_instance, axis=1) > 0]
@@ -39,26 +29,15 @@ class InstancesGenerator:
         return instances
 
     def generate_initial_neighbours(self):
-        # obtain unique labels for each feature
-        features = np.zeros(shape=(len(self._numerical_features), self.NEIGHBOURS_SAMPLE_SIZE))
-
-        # for each numerical feature: generate normal distribution and get samples
+        features = np.zeros(shape=(len(self._initial_instance), self.NEIGHBOURS_SAMPLE_SIZE))
         means = np.mean([self._max_values[self._numerical_features], self._min_values[self._numerical_features]],
                         axis=0)
-        features[self._numerical_features] = npu.normal_dist_sample(
-            self._initial_instance[self._numerical_features],
-            np.sqrt(np.abs(means.astype(float))),  # standard deviation calculated as mean square root
-            self._min_values[self._numerical_features],
-            self._max_values[self._numerical_features],
-            self.NEIGHBOURS_SAMPLE_SIZE
-        )
-
-        # for each categorical feature: pick one randomly from its categories/labels
-        features[np.logical_not(self._numerical_features)] = npu.random_pick(
-            self._data_analyzer.unique_categorical_values(),
-            self.NEIGHBOURS_SAMPLE_SIZE
-        )
-
+        sds = np.sqrt(np.abs(means.astype(float)))  # standard deviation calculated as mean square root
+        features[self._numerical_features] = self.rounded_numerical_samples_normal(means, sds,
+                                                                                   self._min_values,
+                                                                                   self._max_values)
+        categorical_features = np.logical_not(self._numerical_features)
+        features[categorical_features] = self.categorical_samples_uniform(self.NEIGHBOURS_SAMPLE_SIZE)
         return features.transpose()
 
     def generate_neighbours_arr(self, origin_instances, known_alternatives):
@@ -69,7 +48,7 @@ class InstancesGenerator:
         return total_neighbours
 
     def generate_neighbours(self, origin_instance, known_alternatives):
-        features = np.zeros(shape=(len(self._numerical_features), self.NEIGHBOURS_SAMPLE_SIZE))
+        features = np.zeros(shape=(len(origin_instance), self.NEIGHBOURS_SAMPLE_SIZE))
         # calculate mean and std based on min and max values
         means = origin_instance
         sds = np.sqrt(np.abs(means).astype(float))
@@ -79,18 +58,10 @@ class InstancesGenerator:
         tops = np.where(increase_index, self._initial_instance, origin_instance)
         bottoms = np.where(decrease_index, self._initial_instance, origin_instance)
 
-        features[self._numerical_features] = npu.normal_dist_sample(
-            means[self._numerical_features],
-            sds[self._numerical_features],
-            bottoms[self._numerical_features],
-            tops[self._numerical_features],
-            self.NEIGHBOURS_SAMPLE_SIZE
-        )
+        features[self._numerical_features] = self.rounded_numerical_samples_normal(means, sds, bottoms, tops)
         # for each categorical feature: pick one randomly from its categories/labels
-        features[np.logical_not(self._numerical_features)] = npu.random_pick(
-            self._data_analyzer.unique_categorical_values(),
-            self.NEIGHBOURS_SAMPLE_SIZE
-        )
+        categorical_features = np.logical_not(self._numerical_features)
+        features[categorical_features] = self.categorical_samples_uniform(self.NEIGHBOURS_SAMPLE_SIZE)
         neighbours = features.transpose()
 
         # filter all instances with less score than current instance
@@ -100,3 +71,33 @@ class InstancesGenerator:
         neighbours = neighbours[neighbour_scores_x >= score_x_from_origin_to_initial]
         unique_neighbours = npu.not_repeated(known_alternatives, neighbours)
         return unique_neighbours
+
+    # get diff for each sample, if it is less than a delta %, then assign value of initial instance there
+    def rounded_numerical_samples_normal(self, means, sds, bottoms, tops):
+        numerical_f = self._numerical_features
+        features_samples = npu.normal_dist_sample(means[numerical_f], sds[numerical_f], bottoms[numerical_f],
+                                                  tops[numerical_f], self.NEIGHBOURS_SAMPLE_SIZE)
+        return self.round_numerical(features_samples, self._initial_instance[numerical_f])
+
+    def rounded_numerical_samples_uniform(self, sample_size):
+        features_samples = npu.uniform_dist_sample(self._min_values[self._numerical_features],
+                                                   self._max_values[self._numerical_features],
+                                                   sample_size)
+        return self.round_numerical(features_samples, self._initial_instance[self._numerical_features])
+
+    # for each categorical feature: pick one randomly from its categories/labels
+    def categorical_samples_uniform(self, sample_size):
+        return npu.random_pick(self._data_analyzer.unique_categorical_values(), sample_size)
+
+    def round_numerical(self, features_samples, to_round_values):
+        numerical_f = self._numerical_features
+        features_step = (np.abs(self._max_values[numerical_f] - self._min_values[numerical_f])) * self.ROUNDING
+        rounded_samples = np.round(features_samples.transpose() / features_step) * features_step  # round closest step
+
+        samples_differences_with_initial = np.abs(rounded_samples - to_round_values)
+        index_to_round_to_initial = samples_differences_with_initial < features_step
+
+        for row_index, row in enumerate(index_to_round_to_initial):
+            rounded_samples[row_index][row] = to_round_values[row]
+
+        return rounded_samples.transpose()
