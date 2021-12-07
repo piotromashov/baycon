@@ -4,7 +4,7 @@ from common import numpy_utils as npu
 
 
 class InstancesGenerator:
-    INITIAL_NEIGHBOUR_SAMPLE_SIZE = 1000
+    INITIAL_NEIGHBOUR_SAMPLE_SIZE = 200
     NEIGHBOURS_SAMPLE_SIZE = 100
     UNIFORM_SAMPLE_SIZE = 1000
     ROUNDING = 0.01
@@ -52,14 +52,15 @@ class InstancesGenerator:
 
     def generate_neighbours(self, origin_instance, known_alternatives):
         features = np.zeros(shape=(len(origin_instance), self.NEIGHBOURS_SAMPLE_SIZE))
+        numerical_features = self._numerical_features
         # calculate mean and std based on min and max values
-        means = origin_instance
+        means = origin_instance[numerical_features]
         sds = np.sqrt(np.abs(means).astype(float))
         # direction for values to explore for each feature
         increase_index = self._initial_instance >= origin_instance
         decrease_index = self._initial_instance < origin_instance
-        tops = np.where(increase_index, self._initial_instance, origin_instance)
-        bottoms = np.where(decrease_index, self._initial_instance, origin_instance)
+        tops = np.where(increase_index, self._initial_instance, origin_instance)[numerical_features]
+        bottoms = np.where(decrease_index, self._initial_instance, origin_instance)[numerical_features]
 
         features[self._numerical_features] = self.rounded_numerical_samples_normal(means, sds, bottoms, tops,
                                                                                    self.NEIGHBOURS_SAMPLE_SIZE)
@@ -78,16 +79,14 @@ class InstancesGenerator:
 
     # get diff for each sample, if it is less than a delta %, then assign value of initial instance there
     def rounded_numerical_samples_normal(self, means, sds, bottoms, tops, sample_size):
-        numerical_f = self._numerical_features
-        features_samples = npu.normal_dist_sample(means[numerical_f], sds[numerical_f], bottoms[numerical_f],
-                                                  tops[numerical_f], sample_size)
-        return self.round_numerical(features_samples, self._initial_instance[numerical_f])
+        features_samples = npu.normal_dist_sample(means, sds, bottoms, tops, sample_size)
+        return self.round_numerical(features_samples, self._initial_instance[self._numerical_features].astype(float))
 
     def rounded_numerical_samples_uniform(self, sample_size):
         features_samples = npu.uniform_dist_sample(self._min_values[self._numerical_features],
                                                    self._max_values[self._numerical_features],
                                                    sample_size)
-        return self.round_numerical(features_samples, self._initial_instance[self._numerical_features])
+        return self.round_numerical(features_samples, self._initial_instance[self._numerical_features].astype(float))
 
     # for each categorical feature: pick one randomly from its categories/labels
     def categorical_samples_uniform(self, sample_size):
@@ -95,7 +94,9 @@ class InstancesGenerator:
 
     def round_numerical(self, features_samples, to_round_values):
         numerical_f = self._numerical_features
-        features_step = (np.abs(self._max_values[numerical_f] - self._min_values[numerical_f])) * self.ROUNDING
+        features_step = (
+                    (np.abs(self._max_values[numerical_f] - self._min_values[numerical_f])) * self.ROUNDING).astype(
+            float)
         step_amounts = np.divide(features_samples.transpose(), features_step,
                                  out=np.zeros_like(features_samples.transpose()),
                                  where=features_step != 0)
@@ -104,7 +105,7 @@ class InstancesGenerator:
         samples_differences_with_initial = np.abs(rounded_samples - to_round_values)
         index_to_round_to_initial = samples_differences_with_initial < features_step
 
-        for row_index, row in enumerate(index_to_round_to_initial):
+        for row_index, row in enumerate(np.array(index_to_round_to_initial)):
             rounded_samples[row_index][row] = to_round_values[row]
 
         return rounded_samples.transpose()

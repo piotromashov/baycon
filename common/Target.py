@@ -16,8 +16,7 @@ class Target:
             assert isinstance(target_value, int) or isinstance(target_value, str)
         elif target_type == self.TYPE_REGRESSION:
             if self.is_range():
-                self._target_value[0] = float(self._target_value[0])
-                self._target_value[1] = float(self._target_value[1])
+                self._target_value = [float(self._target_value[0]), float(self._target_value[1])]
                 assert self._target_value[0] < self._target_value[1]
             else:
                 self._target_value = float(self._target_value)
