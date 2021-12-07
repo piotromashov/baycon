@@ -95,7 +95,8 @@ def execute(dataset, target, initial_instance_index, categorical_features=None):
                 "predictions": predictions.tolist()
             }
 
-            output_filename = "{}_{}_{}_{}_{}.json".format("bcg", dataset, initial_instance_index, model_name, run)
+            output_filename = "{}_{}_{}_{}_{}_{}.json".format("bcg", dataset, initial_instance_index,
+                                                              target.target_value(), model_name, run)
             with open(output_filename, 'w') as outfile:
                 json.dump(output, outfile)
             print("--- Finished: saved file {}\n".format(output_filename))
