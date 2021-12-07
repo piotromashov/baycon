@@ -4,6 +4,7 @@ from common import numpy_utils as npu
 
 
 class InstancesGenerator:
+    INITIAL_NEIGHBOUR_SAMPLE_SIZE = 1000
     NEIGHBOURS_SAMPLE_SIZE = 100
     UNIFORM_SAMPLE_SIZE = 1000
     ROUNDING = 0.01
@@ -29,23 +30,25 @@ class InstancesGenerator:
         return instances
 
     def generate_initial_neighbours(self):
-        features = np.zeros(shape=(len(self._initial_instance), self.NEIGHBOURS_SAMPLE_SIZE))
+        features = np.zeros(shape=(len(self._initial_instance), self.INITIAL_NEIGHBOUR_SAMPLE_SIZE))
         means = np.mean([self._max_values[self._numerical_features], self._min_values[self._numerical_features]],
                         axis=0)
         sds = np.sqrt(np.abs(means.astype(float)))  # standard deviation calculated as mean square root
         features[self._numerical_features] = self.rounded_numerical_samples_normal(means, sds,
                                                                                    self._min_values,
-                                                                                   self._max_values)
+                                                                                   self._max_values,
+                                                                                   self.INITIAL_NEIGHBOUR_SAMPLE_SIZE)
         categorical_features = np.logical_not(self._numerical_features)
-        features[categorical_features] = self.categorical_samples_uniform(self.NEIGHBOURS_SAMPLE_SIZE)
-        return features.transpose()
+        features[categorical_features] = self.categorical_samples_uniform(self.INITIAL_NEIGHBOUR_SAMPLE_SIZE)
+        instances = features.transpose()
+        return instances[np.sum(instances != self._initial_instance, axis=1) > 0]
 
     def generate_neighbours_arr(self, origin_instances, known_alternatives):
         total_neighbours = np.array([], dtype=np.int64).reshape(0, self._initial_instance.shape[0])
         for origin_instance in origin_instances:
             neighbours = self.generate_neighbours(origin_instance, known_alternatives)
             total_neighbours = npu.unique_concatenate(total_neighbours, neighbours)
-        return total_neighbours
+        return total_neighbours[np.sum(total_neighbours != self._initial_instance, axis=1) > 0]
 
     def generate_neighbours(self, origin_instance, known_alternatives):
         features = np.zeros(shape=(len(origin_instance), self.NEIGHBOURS_SAMPLE_SIZE))
@@ -58,7 +61,8 @@ class InstancesGenerator:
         tops = np.where(increase_index, self._initial_instance, origin_instance)
         bottoms = np.where(decrease_index, self._initial_instance, origin_instance)
 
-        features[self._numerical_features] = self.rounded_numerical_samples_normal(means, sds, bottoms, tops)
+        features[self._numerical_features] = self.rounded_numerical_samples_normal(means, sds, bottoms, tops,
+                                                                                   self.NEIGHBOURS_SAMPLE_SIZE)
         # for each categorical feature: pick one randomly from its categories/labels
         categorical_features = np.logical_not(self._numerical_features)
         features[categorical_features] = self.categorical_samples_uniform(self.NEIGHBOURS_SAMPLE_SIZE)
@@ -73,10 +77,10 @@ class InstancesGenerator:
         return unique_neighbours
 
     # get diff for each sample, if it is less than a delta %, then assign value of initial instance there
-    def rounded_numerical_samples_normal(self, means, sds, bottoms, tops):
+    def rounded_numerical_samples_normal(self, means, sds, bottoms, tops, sample_size):
         numerical_f = self._numerical_features
         features_samples = npu.normal_dist_sample(means[numerical_f], sds[numerical_f], bottoms[numerical_f],
-                                                  tops[numerical_f], self.NEIGHBOURS_SAMPLE_SIZE)
+                                                  tops[numerical_f], sample_size)
         return self.round_numerical(features_samples, self._initial_instance[numerical_f])
 
     def rounded_numerical_samples_uniform(self, sample_size):
@@ -92,7 +96,10 @@ class InstancesGenerator:
     def round_numerical(self, features_samples, to_round_values):
         numerical_f = self._numerical_features
         features_step = (np.abs(self._max_values[numerical_f] - self._min_values[numerical_f])) * self.ROUNDING
-        rounded_samples = np.round(features_samples.transpose() / features_step) * features_step  # round closest step
+        step_amounts = np.divide(features_samples.transpose(), features_step,
+                                 out=np.zeros_like(features_samples.transpose()),
+                                 where=features_step != 0)
+        rounded_samples = np.round(step_amounts) * features_step  # round to closest step
 
         samples_differences_with_initial = np.abs(rounded_samples - to_round_values)
         index_to_round_to_initial = samples_differences_with_initial < features_step
