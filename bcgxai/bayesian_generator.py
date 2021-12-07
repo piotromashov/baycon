@@ -52,6 +52,10 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     instances = generator.generate_initial_neighbours()
     globalInstancesInfo = InstancesInfo(instances, score_calculator, model)
     instances, scores, _, _, _ = globalInstancesInfo.info()
+    global_counterfactuals = globalInstancesInfo.counterfactuals()
+    print("Generated initial neighbours: ({}) CFs ({})".format(len(instances), len(global_counterfactuals)))
+    iterationInstancesInfo = globalInstancesInfo
+
     ranker.update(instances, scores)
     ranker.train()
 
@@ -60,9 +64,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     best_epoch = 0
     # --- END BOOTSTRAP ---
 
-    iterationInstancesInfo = globalInstancesInfo
     # keep searching until good amount of counterfactuals have been found
-    global_counterfactuals = globalInstancesInfo.counterfactuals()
     print('--- Step 2: Explore neighbourhood ---')
     while epoch_counter < EPOCHS_THRESHOLD and \
             (best_global_no_improvement_counter < GLOBAL_NO_IMPROVEMENT_THRESHOLD or
@@ -79,7 +81,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
         counterfactuals = iterationInstancesInfo.counterfactuals()
         if len(counterfactuals):
             # generate neighbours if there are new scores near the current best
-            instances_near_best = iterationInstancesInfo.near(best_score)
+            instances_near_best = iterationInstancesInfo.counterfactuals_near(best_score)
             if len(instances_near_best):
                 iterations_zero_new_instances_counter = 0
                 # generate neighbours near the best ones

@@ -77,9 +77,11 @@ class InstancesInfo:
         counterfactuals = self._instances[achieved_indexes]
         return counterfactuals
 
-    def near(self, score):
-        indexes = self._score_calculator.near_score(score, self._scores)
-        return self._instances[indexes]
+    def counterfactuals_near(self, score):
+        counterfactuals_indexes = self._scores_y > MINIMUM_SCORE_Y
+        scores = self._scores[counterfactuals_indexes]
+        near_indexes = self._score_calculator.near_score(score, scores)
+        return self._instances[counterfactuals_indexes][near_indexes]
 
     def info(self):
         return self._instances, self._scores, self._scores_x, self._scores_y, self._scores_f
