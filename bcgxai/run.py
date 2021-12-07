@@ -62,41 +62,43 @@ def execute(dataset, target, initial_instance_index, categorical_features=None):
 
     initial_instance = X[initial_instance_index]
     initial_prediction = Y[initial_instance_index]
-    run = "0"
+    total_runs = 3
     models_to_run = ["RF", "SVM"]
     for model_name in models_to_run:
-        model = prepare_model(dataset, model_name, X, Y, target.target_type())
-        print("--- Executing: {} Initial Instance: {} Target: {} Model: {}---".format(
-            dataset,
-            initial_instance_index,
-            target.target_value(),
-            model_name
-        ))
-        counterfactuals = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
-        # counterfactuals = data_analyzer.decode(counterfactuals)
+        for run in range(total_runs):
+            model = prepare_model(dataset, model_name, X, Y, target.target_type())
+            print("--- Executing: {} Initial Instance: {} Target: {} Model: {} Run: {} ---".format(
+                dataset,
+                initial_instance_index,
+                target.target_value(),
+                model_name,
+                run
+            ))
+            counterfactuals = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
+            # counterfactuals = data_analyzer.decode(counterfactuals)
 
-        predictions = np.array([])
-        try:
-            predictions = model.predict(counterfactuals)
-        except ValueError:
-            pass
-        output = {
-            "initial_instance": initial_instance.tolist(),
-            "initial_prediction": str(initial_prediction),
-            "target_type": target.target_type(),
-            "target_value": target.target_value(),
-            "target_feature": target.target_feature(),
-            "total_time": str(time_measurement.total_time),
-            "time_to_first_solution": str(time_measurement.time_to_first_solution),
-            "time_to_best_solution": str(time_measurement.time_to_best_solution),
-            "counterfactuals": counterfactuals.tolist(),
-            "predictions": predictions.tolist()
-        }
+            predictions = np.array([])
+            try:
+                predictions = model.predict(counterfactuals)
+            except ValueError:
+                pass
+            output = {
+                "initial_instance": initial_instance.tolist(),
+                "initial_prediction": str(initial_prediction),
+                "target_type": target.target_type(),
+                "target_value": target.target_value(),
+                "target_feature": target.target_feature(),
+                "total_time": str(time_measurement.total_time),
+                "time_to_first_solution": str(time_measurement.time_to_first_solution),
+                "time_to_best_solution": str(time_measurement.time_to_best_solution),
+                "counterfactuals": counterfactuals.tolist(),
+                "predictions": predictions.tolist()
+            }
 
-        output_filename = "{}_{}_{}_{}_{}.json".format("bcg", dataset, initial_instance_index, model_name, run)
-        with open(output_filename, 'w') as outfile:
-            json.dump(output, outfile)
-        print("--- Finished: saved file {}\n".format(output_filename))
+            output_filename = "{}_{}_{}_{}_{}.json".format("bcg", dataset, initial_instance_index, model_name, run)
+            with open(output_filename, 'w') as outfile:
+                json.dump(output, outfile)
+            print("--- Finished: saved file {}\n".format(output_filename))
 
 
 # --- BEGIN CLASSIFICATION EXPERIMENTS ---
