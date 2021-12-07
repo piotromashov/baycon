@@ -12,7 +12,6 @@ def score_y_away_from_target(min_value, turning_point, predictions, max_value):
     return result
 
 
-# TODO: fix when it's at the minimum, it should return 0.1, not 0
 def score_y_reaching_target(min_value, turning_point, predictions, max_value):
     predictions_diff = np.abs(predictions - turning_point)
     total_diff = np.abs(max_value - min_value)
