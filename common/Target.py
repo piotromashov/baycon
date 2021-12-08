@@ -23,7 +23,7 @@ class Target:
                 assert self._target_value in self.REGRESSION_VALUES
 
     def is_range(self):
-        if "," in self._target_value:
+        if isinstance(self._target_value, str) and "," in self._target_value:
             self._target_value = self._target_value.split(",")
         return (isinstance(self._target_value, tuple) or isinstance(self._target_value, list)) and len(
             self._target_value) == 2
@@ -39,3 +39,7 @@ class Target:
 
     def __str__(self):
         return self._target_type + " " + self._target_feature + " " + str(self._target_value)
+
+    def target_value_as_string(self):
+        return "({},{})".format(str(self._target_value[0]), str(self._target_value[1])) if self.is_range() \
+            else self._target_value

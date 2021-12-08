@@ -76,7 +76,7 @@ def execute(dataset, target, initial_instance_index, categorical_features=None):
             print("--- Executing: {} Initial Instance: {} Target: {} Model: {} Run: {} ---".format(
                 dataset,
                 initial_instance_index,
-                target.target_value(),
+                target.target_value_as_string(),
                 model_name,
                 run
             ))
@@ -102,7 +102,7 @@ def execute(dataset, target, initial_instance_index, categorical_features=None):
             }
 
             output_filename = "{}_{}_{}_{}_{}_{}.json".format("bcg", dataset, initial_instance_index,
-                                                              target.target_value(), model_name, run)
+                                                              target.target_value_as_string(), model_name, run)
             with open(output_filename, 'w') as outfile:
                 json.dump(output, outfile)
             print("--- Finished: saved file {}\n".format(output_filename))
