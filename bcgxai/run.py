@@ -32,12 +32,18 @@ def prepare_model(dataset, model_name, X, Y, target_type):
             from sklearn.ensemble import RandomForestRegressor
             model = RandomForestRegressor()
     else:
+        from sklearn.model_selection import RandomizedSearchCV
         if target_type == Target.TYPE_CLASSIFICATION:
             from sklearn.svm import SVC
             model = SVC()
         else:
             from sklearn.svm import SVR
             model = SVR()
+        # tune parameters for SVM to increase precision
+        Cs = [0.1, 1, 10]
+        gammas = [0.01, 0.1, 1]
+        param_grid = {'C': Cs, 'gamma': gammas}
+        model = RandomizedSearchCV(model, param_grid, cv=3)
 
     import pickle
     model_filename = "{0}_{1}.sav".format(type(model).__name__, dataset)
