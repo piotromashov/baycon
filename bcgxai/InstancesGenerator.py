@@ -30,14 +30,14 @@ class InstancesGenerator:
         return instances
 
     def generate_initial_neighbours(self):
+        numerical_f = self._numerical_features
         features = np.zeros(shape=(len(self._initial_instance), self.INITIAL_NEIGHBOUR_SAMPLE_SIZE))
-        means = np.mean([self._max_values[self._numerical_features], self._min_values[self._numerical_features]],
-                        axis=0)
-        sds = np.sqrt(np.abs(means.astype(float)))  # standard deviation calculated as mean square root
-        features[self._numerical_features] = self.rounded_numerical_samples_normal(means, sds,
-                                                                                   self._min_values,
-                                                                                   self._max_values,
-                                                                                   self.INITIAL_NEIGHBOUR_SAMPLE_SIZE)
+        means_for_sds = np.mean([self._max_values[numerical_f], self._min_values[numerical_f]], axis=0)
+        sds = np.sqrt(np.abs(means_for_sds.astype(float)))  # standard deviation calculated as mean square root
+        features[numerical_f] = self.rounded_numerical_samples_normal(self._initial_instance[numerical_f], sds,
+                                                                      self._min_values[numerical_f],
+                                                                      self._max_values[numerical_f],
+                                                                      self.INITIAL_NEIGHBOUR_SAMPLE_SIZE)
         categorical_features = np.logical_not(self._numerical_features)
         features[categorical_features] = self.categorical_samples_uniform(self.INITIAL_NEIGHBOUR_SAMPLE_SIZE)
         instances = features.transpose()
@@ -95,7 +95,7 @@ class InstancesGenerator:
     def round_numerical(self, features_samples, to_round_values):
         numerical_f = self._numerical_features
         features_step = (
-                    (np.abs(self._max_values[numerical_f] - self._min_values[numerical_f])) * self.ROUNDING).astype(
+                (np.abs(self._max_values[numerical_f] - self._min_values[numerical_f])) * self.ROUNDING).astype(
             float)
         step_amounts = np.divide(features_samples.transpose(), features_step,
                                  out=np.zeros_like(features_samples.transpose()),
@@ -103,7 +103,7 @@ class InstancesGenerator:
         rounded_samples = np.round(step_amounts) * features_step  # round to closest step
 
         samples_differences_with_initial = np.abs(rounded_samples - to_round_values)
-        index_to_round_to_initial = samples_differences_with_initial < features_step
+        index_to_round_to_initial = samples_differences_with_initial <= features_step
 
         for row_index, row in enumerate(np.array(index_to_round_to_initial)):
             rounded_samples[row_index][row] = to_round_values[row]
