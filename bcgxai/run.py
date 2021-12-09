@@ -1,11 +1,10 @@
 import json
 
-import numpy as np
 import pandas as pd
 
 import bcgxai.bayesian_generator as bcg_xai
 import bcgxai.time_measurement as time_measurement
-from common.DataAnalyzer import DataAnalyzer
+from common.DataAnalyzer import *
 from common.Target import Target
 
 
@@ -23,20 +22,11 @@ class ModelWrapper:
         return class_prediction == self._target.target_value()
 
 
-def encode(X, categorical_features):
-    from common.MultiColumnLabelEncoder import MultiColumnLabelEncoder
-    return MultiColumnLabelEncoder(categorical_features).fit_transform(X)
-
-
-def scale(X):
-    from sklearn.preprocessing import MinMaxScaler
-    return MinMaxScaler().fit_transform(X)
-
-
 def prepare_model_and_data(dataset, model_name, target, categorical_features):
     dataframe = pd.read_csv("datasets/" + dataset + ".csv")
     Y = dataframe[[target.target_feature()]].values.ravel()
     X = dataframe.drop([target.target_feature()], axis=1).values
+
     if categorical_features:
         X = encode(X, categorical_features)
     if model_name == "RF":
@@ -73,7 +63,9 @@ def prepare_model_and_data(dataset, model_name, target, categorical_features):
         model.fit(X, Y)
         print("Finished training")
         pickle.dump(model, open(model_filename, 'wb'))
-    return model, X, Y, dataframe.columns[dataframe.columns != target.target_feature()]
+
+    feature_names = dataframe.columns[dataframe.columns != target.target_feature()]
+    return model, X, Y, feature_names
 
 
 def execute(dataset_name, target, initial_instance_index, categorical_features=None):

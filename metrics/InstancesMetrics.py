@@ -1,10 +1,9 @@
 import json
 from collections import Counter
 
-import numpy as np
 import pandas as pd
 
-from common.DataAnalyzer import DataAnalyzer
+from common.DataAnalyzer import *
 from common.ScoreCalculator import ScoreCalculator
 from common.Target import Target
 
@@ -16,12 +15,14 @@ def count_and_sort(elements, reverse=False):
 
 
 class InstancesMetrics:
-    def __init__(self, dataframe, input_json_filename):
+    def __init__(self, dataframe, input_json_filename, cat_features):
         with open(input_json_filename) as json_file:
+
             data = json.load(json_file)
+            target = Target(data["target_type"], data["target_feature"], data["target_value"])
             self._initial_instance = np.array(data["initial_instance"])
             self._initial_prediction = data["initial_prediction"]
-            self._target = Target(data["target_type"], data["target_feature"], data["target_value"])
+            self._target = target
             self._counterfactuals = np.array(data["counterfactuals"])
             self._predictions = np.array(data["predictions"])
             self._total_time = data["total_time"]
@@ -34,9 +35,17 @@ class InstancesMetrics:
             except ValueError:
                 pass
 
+        Y = dataframe[[target.target_feature()]].values.ravel()
+        X = dataframe.drop([target.target_feature()], axis=1).values
+
+        if cat_features:
+            X = encode(X, cat_features)
+        X = scale(X)
+
         if len(self._counterfactuals) > 0:
-            data_analyzer = DataAnalyzer(dataframe, self._target)
-            data_analyzer.encode()
+            feature_names = dataframe.columns[dataframe.columns != target.target_feature()]
+            data_analyzer = DataAnalyzer(X, Y, feature_names, self._target, cat_features)
+
             self._scores, self._scores_x, self._scores_y, self._scores_f = self.calculate_scores(data_analyzer)
             self._features_changed = self.calculate_features_changed(self._counterfactuals)
         else:
@@ -44,7 +53,6 @@ class InstancesMetrics:
             warnings.warn("Empty counterfactuals for {}".format(input_json_filename))
             self._scores, self._scores_x, self._scores_y, self._scores_f = [], [], [], []
             self._features_changed = []
-        print(self)
         self.to_csv(input_json_filename)
 
     def calculate_scores(self, data_analyzer):

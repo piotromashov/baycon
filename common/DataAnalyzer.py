@@ -3,6 +3,16 @@ import numpy as np
 from common.Target import Target
 
 
+def encode(X, categorical_features):
+    from common.MultiColumnLabelEncoder import MultiColumnLabelEncoder
+    return MultiColumnLabelEncoder(categorical_features).fit_transform(X)
+
+
+def scale(X):
+    from sklearn.preprocessing import MinMaxScaler
+    return MinMaxScaler().fit_transform(X)
+
+
 class DataAnalyzer:
     def __init__(self, X, Y, feature_names, target, cat_features=None, feature_weights=None):
         if feature_weights is None:
