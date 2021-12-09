@@ -1,36 +1,30 @@
 import numpy as np
 
-from common.MultiColumnLabelEncoder import MultiColumnLabelEncoder
 from common.Target import Target
 
 
 class DataAnalyzer:
-    def __init__(self, dataframe, target, cat_features=None, feature_weights=None):
+    def __init__(self, X, Y, feature_names, target, cat_features=None, feature_weights=None):
         if feature_weights is None:
             feature_weights = {}
         if cat_features is None:
             cat_features = []
-        target_feature = target.target_feature()
-        assert target_feature in dataframe.columns
-        self._features = dataframe.columns[dataframe.columns != target_feature]
+        self._X = X
+        self._Y = Y
+        self._features = feature_names
         self._target = target
-        self._dataframe = dataframe
         self._feature_weights = [feature_weights[f] if f in feature_weights else 1 for f in self._features]
         self._categorical_features = [True if f in cat_features else False for f in self._features]
         # perform additional check for strings and treat them as categories as well
-        for idx, f in enumerate(self._features):
+        for idx in range(len(self._features)):
             try:
-                float(self._dataframe[f][0])
+                float(self._X[idx][0])
             except ValueError:
                 self._categorical_features[idx] = True
         self._numerical_features = np.logical_not(self._categorical_features)
-
         self._analyze_dataframe()
 
     def _analyze_dataframe(self):
-        target_feature = self._target.target_feature()
-        self._Y = self._dataframe[[target_feature]].values.ravel()
-        self._X = self._dataframe.drop([target_feature], axis=1).values
         self._analyze_x()
         self._analyze_y()
 
@@ -60,14 +54,6 @@ class DataAnalyzer:
         else:
             self._Y_min = None
             self._Y_max = None
-
-    def encode(self):
-        self._mcle = MultiColumnLabelEncoder(self._categorical_features).fit(self._X)
-        self._X = self._mcle.transform(self._X)
-        self._analyze_x()
-
-    def decode(self, samples):
-        return self._mcle.inverse_transform(samples)
 
     def data(self):
         return self._X, self._Y

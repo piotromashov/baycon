@@ -23,9 +23,24 @@ class ModelWrapper:
         return class_prediction == self._target.target_value()
 
 
-def prepare_model(dataset, model_name, X, Y, target_type):
+def encode(X, categorical_features):
+    from common.MultiColumnLabelEncoder import MultiColumnLabelEncoder
+    return MultiColumnLabelEncoder(categorical_features).fit_transform(X)
+
+
+def scale(X):
+    from sklearn.preprocessing import MinMaxScaler
+    return MinMaxScaler().fit_transform(X)
+
+
+def prepare_model_and_data(dataset, model_name, target, categorical_features):
+    dataframe = pd.read_csv("datasets/" + dataset + ".csv")
+    Y = dataframe[[target.target_feature()]].values.ravel()
+    X = dataframe.drop([target.target_feature()], axis=1).values
+    if categorical_features:
+        X = encode(X, categorical_features)
     if model_name == "RF":
-        if target_type == Target.TYPE_CLASSIFICATION:
+        if target.target_type() == Target.TYPE_CLASSIFICATION:
             from sklearn.ensemble import RandomForestClassifier
             model = RandomForestClassifier()
         else:
@@ -33,12 +48,14 @@ def prepare_model(dataset, model_name, X, Y, target_type):
             model = RandomForestRegressor()
     else:
         from sklearn.model_selection import RandomizedSearchCV
-        if target_type == Target.TYPE_CLASSIFICATION:
+        if target.target_type() == Target.TYPE_CLASSIFICATION:
             from sklearn.svm import SVC
             model = SVC()
         else:
             from sklearn.svm import SVR
             model = SVR()
+        # normalize data
+        X = scale(X)
         # tune parameters for SVM to increase precision
         Cs = [0.1, 1, 10]
         gammas = [0.01, 0.1, 1]
@@ -56,33 +73,27 @@ def prepare_model(dataset, model_name, X, Y, target_type):
         model.fit(X, Y)
         print("Finished training")
         pickle.dump(model, open(model_filename, 'wb'))
-    return model
+    return model, X, Y, dataframe.columns[dataframe.columns != target.target_feature()]
 
 
-def execute(dataset, target, initial_instance_index, categorical_features=None):
-    # load dataset, train model
-    df = pd.read_csv("datasets/" + dataset + ".csv")
-    data_analyzer = DataAnalyzer(df, target, categorical_features)
-    data_analyzer.encode()
-    X, Y = data_analyzer.data()
-
-    initial_instance = X[initial_instance_index]
-    initial_prediction = Y[initial_instance_index]
+def execute(dataset_name, target, initial_instance_index, categorical_features=None):
     total_runs = 3
     models_to_run = ["RF", "SVM"]
     for model_name in models_to_run:
         for run in range(total_runs):
-            model = prepare_model(dataset, model_name, X, Y, target.target_type())
+            model, X, Y, feature_names = prepare_model_and_data(dataset_name, model_name, target, categorical_features)
+            data_analyzer = DataAnalyzer(X, Y, feature_names, target, categorical_features)
+            X, Y = data_analyzer.data()
+            initial_instance = X[initial_instance_index]
+            initial_prediction = Y[initial_instance_index]
             print("--- Executing: {} Initial Instance: {} Target: {} Model: {} Run: {} ---".format(
-                dataset,
+                dataset_name,
                 initial_instance_index,
                 target.target_value_as_string(),
                 model_name,
                 run
             ))
             counterfactuals = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
-            # counterfactuals = data_analyzer.decode(counterfactuals)
-
             predictions = np.array([])
             try:
                 predictions = model.predict(counterfactuals)
@@ -101,7 +112,7 @@ def execute(dataset, target, initial_instance_index, categorical_features=None):
                 "predictions": predictions.tolist()
             }
 
-            output_filename = "{}_{}_{}_{}_{}_{}.json".format("bcg", dataset, initial_instance_index,
+            output_filename = "{}_{}_{}_{}_{}_{}.json".format("bcg", dataset_name, initial_instance_index,
                                                               target.target_value_as_string(), model_name, run)
             with open(output_filename, 'w') as outfile:
                 json.dump(output, outfile)
@@ -139,8 +150,8 @@ execute("kc2", t, 520)
 # for column in df.columns:
 #     print(column)
 #     print(df[column].unique())
-# # cat_features = ["V3", "V4", "V5", "V6", "V7", "V9", "V10", "V11", "V16", "V19", "V20", "V21", "V23", "V24", "V25",
-# #               "V26", "V29", "V32", "V33", "V34", "V35", "V38", "V40", "V41"]
+# cat_features = ["V3", "V4", "V5", "V6", "V7", "V9", "V10", "V11", "V16", "V19", "V20", "V21", "V23", "V24", "V25",
+#               "V26", "V29", "V32", "V33", "V34", "V35", "V38", "V40", "V41"]
 cat_features = []
 t = Target(target_type="classification", target_feature="Class", target_value=2)
 execute("phpGUrE90", t, 300, cat_features)
