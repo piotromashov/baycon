@@ -26,7 +26,7 @@ class RandomDistMocker:
 
 
 def get_truncated_normal(mean=0, sd=1, low=0, upp=10):
-    if sd < 1 or low == upp:
+    if sd <= 0 or low == upp:
         return RandomDistMocker(mean)
     return truncnorm(
         (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd)
@@ -38,7 +38,7 @@ def normal_dist_sample(means, sds, bottoms, tops, sample_size):
 
 
 def uniform_dist_sample(bottoms, tops, sample_size):
-    features = [rnd.uniform(bottoms[k], tops[k] + 1, sample_size) for k in range(len(bottoms))]
+    features = [rnd.uniform(bottoms[k], tops[k], sample_size) for k in range(len(bottoms))]
     return np.array(features)
 
 
