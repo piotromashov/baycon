@@ -77,25 +77,19 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
         # --- end update counters ---
 
         instances_to_check = []
-        # check if new counterfactuals have been found
-        counterfactuals = iterationInstancesInfo.counterfactuals()
-        if len(counterfactuals):
-            # generate neighbours if there are new scores near the current best
-            instances_near_best = iterationInstancesInfo.counterfactuals_near(best_score)
-            if len(instances_near_best):
-                iterations_zero_new_instances_counter = 0
-                # generate neighbours near the best ones
-                known_instances = globalInstancesInfo.instances()
-                instances_to_check = generator.generate_neighbours_arr(instances_near_best, known_instances)
-                promising_instances = npu.unique_concatenate(promising_instances, instances_to_check)
-                print("Generated neighbours: ({}) Unique overall ({})".format(len(instances_to_check),
-                                                                              len(promising_instances)))
-            else:
-                instances_to_check = []
+        instances_near_best = iterationInstancesInfo.near(best_score)
+        # generate neighbours to the nearest instances to the best score
+        if len(instances_near_best):
+            iterations_zero_new_instances_counter = 0
+            known_instances = globalInstancesInfo.instances()
+            instances_to_check = generator.generate_neighbours_arr(instances_near_best, known_instances)
+            promising_instances = npu.unique_concatenate(promising_instances, instances_to_check)
+            print("Generated neighbours: ({}) Unique overall ({})".format(len(instances_to_check),
+                                                                          len(promising_instances)))
 
         # no new iteration instances to check, search random space within current best.
-        if not len(instances_to_check) or not len(counterfactuals):
-            print("No CF neighbours generated, generating random instances...")
+        if not len(instances_to_check) or not len(instances_near_best):
+            print("No best neighbours generated, generating random instances...")
             instances_to_check = generator.generate_random(best_instance, globalInstancesInfo.instances())
             if not len(instances_to_check):
                 print("No random were generated, retrying on next epoch...")
