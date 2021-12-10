@@ -33,8 +33,8 @@ class InstancesInfo:
         return len(self._instances)
 
     def best(self):
-        id = np.argmax(self._scores)
-        return self._instances[id], self._scores[id], self._scores_x[id], self._scores_y[id], self._scores_f[id]
+        idx = np.argmax(self._scores)
+        return self._instances[idx], self._scores[idx], self._scores_x[idx], self._scores_y[idx], self._scores_f[idx]
 
     def has_new_best(self):
         return self._newBest
@@ -77,11 +77,9 @@ class InstancesInfo:
         counterfactuals = self._instances[achieved_indexes]
         return counterfactuals
 
-    def counterfactuals_near(self, score):
-        counterfactuals_indexes = self._scores_y > MINIMUM_SCORE_Y
-        scores = self._scores[counterfactuals_indexes]
-        near_indexes = self._score_calculator.near_score(score, scores)
-        return self._instances[counterfactuals_indexes][near_indexes]
+    def near(self, score):
+        near_indexes = self._score_calculator.near_score(score, self._scores_x)
+        return self._instances[near_indexes]
 
     def info(self):
         return self._instances, self._scores, self._scores_x, self._scores_y, self._scores_f
