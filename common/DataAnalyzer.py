@@ -24,7 +24,7 @@ class DataAnalyzer:
         self._features = feature_names
         self._target = target
         self._feature_weights = [feature_weights[f] if f in feature_weights else 1 for f in self._features]
-        self._categorical_features = [True if f in cat_features else False for f in self._features]
+        self._categorical_features = np.isin(self._features, cat_features)
         # perform additional check for strings and treat them as categories as well
         for idx in range(len(self._features)):
             try:

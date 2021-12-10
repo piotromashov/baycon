@@ -69,7 +69,7 @@ def prepare_model_and_data(dataset, model_name, target, categorical_features):
     return model, X, Y, feature_names
 
 
-def execute(dataset_name, target, initial_instance_index, categorical_features=None):
+def execute(dataset_name, target, initial_instance_index, categorical_features=[]):
     total_runs = 3
     models_to_run = ["RF", "SVM"]
     for model_name in models_to_run:
@@ -95,6 +95,7 @@ def execute(dataset_name, target, initial_instance_index, categorical_features=N
             output = {
                 "initial_instance": initial_instance.tolist(),
                 "initial_prediction": str(initial_prediction),
+                "categorical_features": categorical_features,
                 "target_type": target.target_type(),
                 "target_value": target.target_value(),
                 "target_feature": target.target_feature(),

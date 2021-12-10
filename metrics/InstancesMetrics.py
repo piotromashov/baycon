@@ -15,7 +15,7 @@ def count_and_sort(elements, reverse=False):
 
 
 class InstancesMetrics:
-    def __init__(self, dataframe, input_json_filename, model, cat_features):
+    def __init__(self, dataframe, input_json_filename, model):
         with open(input_json_filename) as json_file:
 
             data = json.load(json_file)
@@ -23,6 +23,7 @@ class InstancesMetrics:
             self._initial_instance = np.array(data["initial_instance"])
             self._initial_prediction = data["initial_prediction"]
             self._target = target
+            self._categorical_features = np.array(data["categorical_features"])
             self._counterfactuals = np.array(data["counterfactuals"])
             self._predictions = np.array(data["predictions"])
             self._total_time = data["total_time"]
@@ -38,14 +39,14 @@ class InstancesMetrics:
         Y = dataframe[[target.target_feature()]].values.ravel()
         X = dataframe.drop([target.target_feature()], axis=1).values
 
-        if cat_features:
-            X = encode(X, cat_features)
+        if len(self._categorical_features):
+            X = encode(X, self._categorical_features)
         if model == "SVM":
             X = scale(X)
 
         if len(self._counterfactuals) > 0:
             feature_names = dataframe.columns[dataframe.columns != target.target_feature()]
-            data_analyzer = DataAnalyzer(X, Y, feature_names, self._target, cat_features)
+            data_analyzer = DataAnalyzer(X, Y, feature_names, self._target, self._categorical_features)
 
             score_calculator = ScoreCalculator(self._initial_instance, self._initial_prediction, self._target,
                                                data_analyzer)
