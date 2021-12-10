@@ -47,10 +47,11 @@ def prepare_model_and_data(dataset, model_name, target, categorical_features):
         # normalize data
         X = scale(X)
         # tune parameters for SVM to increase precision
-        Cs = [0.1, 1, 10]
+        Cs = [0.1, 1, 10, 100]
         gammas = [0.01, 0.1, 1]
-        param_grid = {'C': Cs, 'gamma': gammas}
-        model = RandomizedSearchCV(model, param_grid, cv=3)
+        kernels = ['rbf', 'poly', 'sigmoid']
+        param_grid = {'kernel': kernels, 'C': Cs, 'gamma': gammas}
+        model = RandomizedSearchCV(model, param_grid, cv=5, n_jobs=-1)
 
     import pickle
     model_filename = "{0}_{1}.sav".format(type(model).__name__, dataset)
