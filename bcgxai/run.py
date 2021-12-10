@@ -86,7 +86,7 @@ def execute(dataset_name, target, initial_instance_index, categorical_features=[
                 model_name,
                 run
             ))
-            counterfactuals = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
+            counterfactuals, ranker = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
             predictions = np.array([])
             try:
                 predictions = model.predict(counterfactuals)
