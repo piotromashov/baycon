@@ -33,6 +33,7 @@ class ScoreCalculator:
         score_x = self.score_x(self._initial_instance, instances)
         score_y = self.score_y(predictions)
         score_f = self.score_f(instances)
+        assert (score_x >= 0).all() and (score_y >= 0).all() and (score_f >= 0).all()
         fitness_score = score_x * score_y * score_f
         return np.round((fitness_score, score_x, score_y, score_f), 5)
 

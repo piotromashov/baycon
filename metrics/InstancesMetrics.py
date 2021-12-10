@@ -15,7 +15,7 @@ def count_and_sort(elements, reverse=False):
 
 
 class InstancesMetrics:
-    def __init__(self, dataframe, input_json_filename, cat_features):
+    def __init__(self, dataframe, input_json_filename, model, cat_features):
         with open(input_json_filename) as json_file:
 
             data = json.load(json_file)
@@ -40,13 +40,17 @@ class InstancesMetrics:
 
         if cat_features:
             X = encode(X, cat_features)
-        X = scale(X)
+        if model == "SVM":
+            X = scale(X)
 
         if len(self._counterfactuals) > 0:
             feature_names = dataframe.columns[dataframe.columns != target.target_feature()]
             data_analyzer = DataAnalyzer(X, Y, feature_names, self._target, cat_features)
 
-            self._scores, self._scores_x, self._scores_y, self._scores_f = self.calculate_scores(data_analyzer)
+            score_calculator = ScoreCalculator(self._initial_instance, self._initial_prediction, self._target,
+                                               data_analyzer)
+            self._scores, self._scores_x, self._scores_y, self._scores_f = score_calculator.fitness_score(
+                self._counterfactuals, self._predictions)
             self._features_changed = self.calculate_features_changed(self._counterfactuals)
         else:
             import warnings
@@ -54,11 +58,6 @@ class InstancesMetrics:
             self._scores, self._scores_x, self._scores_y, self._scores_f = [], [], [], []
             self._features_changed = []
         self.to_csv(input_json_filename)
-
-    def calculate_scores(self, data_analyzer):
-        score_calculator = ScoreCalculator(self._initial_instance, self._initial_prediction, self._target,
-                                           data_analyzer)
-        return score_calculator.fitness_score(self._counterfactuals, self._predictions)
 
     def calculate_features_changed(self, counterfactuals):
         return [sum(counterfactual != self._initial_instance) for counterfactual in counterfactuals]
