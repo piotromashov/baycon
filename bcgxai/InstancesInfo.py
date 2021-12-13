@@ -78,7 +78,7 @@ class InstancesInfo:
         return counterfactuals
 
     def near(self, score):
-        near_indexes = self._score_calculator.near_score(score, self._scores_x)
+        near_indexes = self._score_calculator.near_score(score, self._scores)
         return self._instances[near_indexes]
 
     def info(self):
