@@ -45,3 +45,19 @@ def uniform_dist_sample(bottoms, tops, sample_size):
 def random_pick(column_labels, sample_size):
     column_values = [np.random.choice(column_labels[idx], sample_size) for idx in range(len(column_labels))]
     return np.reshape(column_values, (len(column_values), sample_size))
+
+
+def features_to_update(num_features, sampling_factor=1000):
+    def set_idx(row):  # transform sample to boolean matrix
+        new_row = np.zeros(num_features, dtype=bool)
+        new_row[row] = True
+        return new_row
+
+    sample_matrix = []
+    for current_num_changes in range(1, num_features):
+        sample_size = sampling_factor // current_num_changes
+        sample = np.random.randint(0, num_features, size=(sample_size, current_num_changes))
+        sample = np.apply_along_axis(set_idx, 1, sample)  # transform sample to boolean matrix
+        sample_matrix.append(sample)
+
+    return np.concatenate(sample_matrix)
