@@ -76,9 +76,10 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
         iterations_zero_new_instances_counter += 1
         # --- end update counters ---
 
-        instances_to_check = []
+        instances_to_check = np.empty(shape=(0, initial_instance.shape[0]))
         instances_near_best = iterationInstancesInfo.near(best_score)
         # generate neighbours to the nearest instances to the best score
+        print("Generating neighbors for {} near best instances".format(len(instances_near_best)))
         if len(instances_near_best):
             iterations_zero_new_instances_counter = 0
             known_instances = globalInstancesInfo.instances()
@@ -86,15 +87,17 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
             promising_instances = npu.unique_concatenate(promising_instances, instances_to_check)
             print("Generated neighbours: ({}) Unique overall ({})".format(len(instances_to_check),
                                                                           len(promising_instances)))
+        else:
+            print("No instances near best found, skipping neighbors generation")
 
-        # no new iteration instances to check, search random space within current best.
-        if not len(instances_to_check) or not len(instances_near_best):
-            print("No best neighbours generated, generating random instances...")
-            instances_to_check = generator.generate_random(best_instance, globalInstancesInfo.instances())
-            if not len(instances_to_check):
-                print("No random were generated, retrying on next epoch...")
-                continue
-            print("Generated random instances: ({})".format(len(instances_to_check)))
+        # search random space within current best.
+        random_instances_within_best_score = generator.generate_random(best_instance, globalInstancesInfo.instances())
+        if not len(random_instances_within_best_score):
+            print("No random were generated, retrying on next epoch...")
+            continue
+        else:
+            print("Generated random instances: ({})".format(len(random_instances_within_best_score)))
+            instances_to_check = npu.unique_concatenate(instances_to_check, random_instances_within_best_score)
 
         # rank aka acquisition function
         ranked_instances = ranker.rank(globalInstancesInfo.instances(), instances_to_check)
