@@ -32,10 +32,12 @@ def filter_outliers(counterfactuals, data_analyzer):
 
 
 def run(initial_instance, initial_prediction, target: Target, data_analyzer, model):
+
     print('--- Step 0: Load internal objects ---')
 
     time_measurement.init()
 
+    initial_instance = initial_instance.astype(float)   # np operations need same type object to compute!
     score_calculator = ScoreCalculator(initial_instance, initial_prediction, target, data_analyzer)
     surrogate_model = RandomForestRegressor(100, n_jobs=-1, max_depth=100)
     ranker = SurrogateRanker(model, surrogate_model, initial_instance, score_calculator, target)
