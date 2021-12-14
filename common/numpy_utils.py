@@ -56,6 +56,7 @@ def features_to_update(num_features, sampling_factor=1000):
     sample_matrix = []
     for current_num_changes in range(1, num_features):
         sample_size = sampling_factor // current_num_changes
+        sample_size = np.maximum(sample_size, 1)  # when the feature space is bigger than sampling factor, this was 0
         sample = np.random.randint(0, num_features, size=(sample_size, current_num_changes))
         sample = np.apply_along_axis(set_idx, 1, sample)  # transform sample to boolean matrix
         sample_matrix.append(sample)
