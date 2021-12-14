@@ -63,6 +63,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
 
     promising_instances = np.empty(shape=(0, initial_instance.shape[0]))
     best_instance, best_score, best_score_x, best_score_y, best_score_f = globalInstancesInfo.best()
+    instances_near_best = np.array([best_instance])
     best_epoch = 0
     # --- END BOOTSTRAP ---
 
@@ -79,7 +80,6 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
         # --- end update counters ---
 
         instances_to_check = np.empty(shape=(0, initial_instance.shape[0]))
-        instances_near_best = iterationInstancesInfo.near(best_score)
         # generate neighbours to the nearest instances to the best score
         print("Generating neighbors for {} near best instances".format(len(instances_near_best)))
         if len(instances_near_best):
@@ -111,6 +111,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
         globalInstancesInfo.extend(iterationInstancesInfo)
         # update training data with known data
         instances, scores, _, _, _ = iterationInstancesInfo.info()
+        instances_near_best = iterationInstancesInfo.near(best_score)
         ranker.update(instances, scores)
 
         # update new best instance, new best score, and oversample
