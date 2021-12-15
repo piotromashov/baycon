@@ -47,9 +47,9 @@ class DataAnalyzer:
 
         # categorical features shouldn't have minimum and maximum
         self._X_min_values = np.array(
-            [None if v else X_min_values[k] for k, v in enumerate(self._categorical_features)])
+            [None if v else X_min_values[k] for k, v in enumerate(self._categorical_features)]).astype(float)
         self._X_max_values = np.array(
-            [None if v else X_max_values[k] for k, v in enumerate(self._categorical_features)])
+            [None if v else X_max_values[k] for k, v in enumerate(self._categorical_features)]).astype(float)
 
         # create ranges for features, numerical and categorical
         self._feature_ranges = np.array([None] * self._features_count)
