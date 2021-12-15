@@ -18,7 +18,7 @@ def first():
     global time_to_first_solution, init_time
     if time_to_first_solution == float('inf'):
         time_to_first_solution = time.process_time() - init_time
-
+        best()
 
 def best():
     global time_to_best_solution, init_time
