@@ -20,7 +20,7 @@ def score_y_reaching_target(min_value, turning_point, predictions, max_value):
 
 
 class ScoreCalculator:
-    SCORE_JITTER = 0.75
+    SCORE_JITTER = 0.95
 
     def __init__(self, initial_instance, initial_prediction, target, data_analyzer):
         self._initial_instance = initial_instance

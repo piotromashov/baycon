@@ -20,8 +20,7 @@ class InstancesGenerator:
     def generate_initial_neighbours(self):
         def numerical_sampling_strategy(rows_to_sample):
             numerical_f = self._numerical_features
-            means_for_sds = np.mean([self._max_values[numerical_f], self._min_values[numerical_f]], axis=0).astype(
-                float)
+            means_for_sds = np.mean([self._max_values[numerical_f], self._min_values[numerical_f]], axis=0)
             sds = np.sqrt(np.abs(means_for_sds))  # standard deviation calculated as mean square root
             features_samples = npu.normal_dist_sample(self._initial_instance[numerical_f], sds,
                                                       self._min_values[numerical_f], self._max_values[numerical_f],
@@ -33,12 +32,13 @@ class InstancesGenerator:
 
     def generate_neighbours_arr(self, origin_instances, known_alternatives):
         total_neighbours = np.array([], dtype=np.int64).reshape(0, self._initial_instance.shape[0])
+        sampling_factor = self.NEIGHBOURS_SAMPLING_FACTOR//len(origin_instances)
         for origin_instance in origin_instances:
-            neighbours = self.generate_neighbours(origin_instance, known_alternatives)
+            neighbours = self.generate_neighbours(origin_instance, known_alternatives, sampling_factor)
             total_neighbours = npu.unique_concatenate(total_neighbours, neighbours)
         return total_neighbours[np.sum(total_neighbours != self._initial_instance, axis=1) > 0]
 
-    def generate_neighbours(self, origin_instance, known_alternatives):
+    def generate_neighbours(self, origin_instance, known_alternatives, sampling_factor):
         def numerical_sampling_strategy(rows_to_sample):
             numerical_features = self._numerical_features
             # calculate mean and std based on min and max values
@@ -52,15 +52,14 @@ class InstancesGenerator:
             features_samples = npu.normal_dist_sample(means, sds, bottoms, tops, rows_to_sample)
             return self.round_numerical(features_samples, self._initial_instance[self._numerical_features])
 
-        instances = self.generate(self.NEIGHBOURS_SAMPLING_FACTOR, numerical_sampling_strategy)
+        instances = self.generate(sampling_factor, numerical_sampling_strategy)
         instances = self.filter(instances, origin_instance, known_alternatives)
         return instances
 
     def generate_random(self, best_instance, known_alternatives):
         def numerical_sampling_strategy(rows_to_sample):
-            features_samples = npu.uniform_dist_sample(self._min_values[self._numerical_features],
-                                                       self._max_values[self._numerical_features],
-                                                       rows_to_sample)
+            mins, maxs = self._min_values[self._numerical_features], self._max_values[self._numerical_features]
+            features_samples = npu.uniform_dist_sample(mins, maxs, rows_to_sample)
             return self.round_numerical(features_samples, self._initial_instance[self._numerical_features])
 
         instances = self.generate(self.UNIFORM_SAMPLING_FACTOR, numerical_sampling_strategy)
@@ -82,6 +81,7 @@ class InstancesGenerator:
         return instances[np.sum(instances != self._initial_instance, axis=1) > 0]
 
     def filter(self, instances, from_instance, known_alternatives):
+        instances = np.unique(instances, axis=0)
         instances = npu.not_repeated(known_alternatives, instances)
         return self._score_calculator.filter_instances_within_score(from_instance, instances)
 

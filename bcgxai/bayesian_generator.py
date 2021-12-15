@@ -111,7 +111,6 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
         globalInstancesInfo.extend(iterationInstancesInfo)
         # update training data with known data
         instances, scores, _, _, _ = iterationInstancesInfo.info()
-        instances_near_best = iterationInstancesInfo.near(best_score)
         ranker.update(instances, scores)
 
         # update new best instance, new best score, and oversample
@@ -131,6 +130,7 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
         # retrain surrogate model with updated training data
         ranker.train()
         global_counterfactuals = globalInstancesInfo.counterfactuals()
+        instances_near_best = iterationInstancesInfo.near(best_score)
 
     # perform final check in instances
     print("--- Step 3: Final check on promising alternatives ({}) ---".format(len(promising_instances)))
