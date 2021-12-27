@@ -14,31 +14,28 @@ def scale(X):
 
 
 class DataAnalyzer:
-    def __init__(self, X, Y, feature_names, target, cat_features=None, feature_weights=None):
-        if feature_weights is None:
-            feature_weights = {}
-        if cat_features is None:
-            cat_features = []
+    def __init__(self, feature_constraints, X, Y, target):
+        self._features = feature_constraints.names()
+        self._feature_weights = feature_constraints.weights()
+        self._categorical_features = feature_constraints.categorical()
+        self._numerical_features = feature_constraints.numerical()
         self._X = X
         self._Y = Y
-        self._features = feature_names
         self._target = target
-        self._feature_weights = [feature_weights[f] if f in feature_weights else 1 for f in self._features]
-        self._categorical_features = np.isin(self._features, cat_features)
+
         # perform additional check for strings and treat them as categories as well
         for idx in range(len(self._features)):
             try:
                 float(self._X[idx][0])
             except ValueError:
                 self._categorical_features[idx] = True
-        self._numerical_features = np.logical_not(self._categorical_features)
-        self._analyze_dataframe()
+        self._analyze_dataframe(feature_constraints)
 
-    def _analyze_dataframe(self):
-        self._analyze_x()
+    def _analyze_dataframe(self, feature_constraints):
+        self._analyze_x(feature_constraints)
         self._analyze_y()
 
-    def _analyze_x(self):
+    def _analyze_x(self, feature_constraints):
         self._features_count = self._X.shape[1]
         X_min_values = np.zeros(self._features_count)
         X_max_values = np.zeros(self._features_count)

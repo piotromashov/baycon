@@ -36,7 +36,7 @@ class InstancesGenerator:
         for origin_instance in origin_instances:
             neighbours = self.generate_neighbours(origin_instance, known_alternatives, sampling_factor)
             total_neighbours = npu.unique_concatenate(total_neighbours, neighbours)
-        return total_neighbours[np.sum(total_neighbours != self._initial_instance, axis=1) > 0]
+        return total_neighbours
 
     def generate_neighbours(self, origin_instance, known_alternatives, sampling_factor):
         def numerical_sampling_strategy(rows_to_sample):

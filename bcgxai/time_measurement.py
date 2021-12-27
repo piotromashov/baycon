@@ -20,6 +20,7 @@ def first():
         time_to_first_solution = time.process_time() - init_time
         best()
 
+
 def best():
     global time_to_best_solution, init_time
     time_to_best_solution = time.process_time() - init_time

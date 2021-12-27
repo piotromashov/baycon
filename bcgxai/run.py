@@ -6,6 +6,7 @@ import bcgxai.bayesian_generator as bcg_xai
 import bcgxai.time_measurement as time_measurement
 from common.DataAnalyzer import *
 from common.Target import Target
+from common.FeatureConstraints import FeatureConstraints
 
 
 class ModelWrapper:
@@ -69,13 +70,14 @@ def prepare_model_and_data(dataset, model_name, target, categorical_features):
     return model, X, Y, feature_names
 
 
-def execute(dataset_name, target, initial_instance_index, categorical_features=[]):
-    total_runs = 3
+def execute(dataset_name, target, initial_instance_index, categorical=[], actionable=[], ranges={}, weights={}):
+    total_runs = 1
     models_to_run = ["RF", "SVM"]
     for model_name in models_to_run:
         for run in range(total_runs):
-            model, X, Y, feature_names = prepare_model_and_data(dataset_name, model_name, target, categorical_features)
-            data_analyzer = DataAnalyzer(X, Y, feature_names, target, categorical_features)
+            model, X, Y, feature_names = prepare_model_and_data(dataset_name, model_name, target, categorical)
+            feature_constraints = FeatureConstraints(feature_names, categorical, actionable, ranges, weights)
+            data_analyzer = DataAnalyzer(feature_constraints, X, Y, target)
             X, Y = data_analyzer.data()
             initial_instance = X[initial_instance_index]
             initial_prediction = Y[initial_instance_index]
@@ -95,7 +97,11 @@ def execute(dataset_name, target, initial_instance_index, categorical_features=[
             output = {
                 "initial_instance": initial_instance.tolist(),
                 "initial_prediction": str(initial_prediction),
-                "categorical_features": categorical_features,
+                "feature_names": feature_names.tolist(),
+                "categorical_features": categorical,
+                "actionable_features": actionable,
+                "feature_ranges": ranges,
+                "feature_weights": weights,
                 "target_type": target.target_type(),
                 "target_value": target.target_value(),
                 "target_feature": target.target_feature(),
