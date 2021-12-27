@@ -1,1 +1,11 @@
-# Bayesian Counterfactuals Generator for eXplainable Artificial Intelligence (BCG-XAI)
+# CounterfactualBay: Model-agnostic Bayesian Counterfactual Generator
+
+Generating counterfactuals that describe hypothetical predictive scenarios is the de facto standard for explaining machine learning models and their predictions. However, building a counterfactual generator that is time-efficient, scalable, model-agnostic, compatible with continuous and categorical attributes, not drawn towards out-of-distribution counterfactuals as well as optimizing for feature sparsity and closeness to the explained instance is still an open challenge. To address this gap, we propose a novel counterfactual generation method based on probabilistic feature sampling and Bayesian optimization.
+
+Counterfactuals are an explainability approach uniquely positioned in this space as they can be generated posthoc but are truthful with respect to the underlying black box. They help ML users to understand what the output of a predictive model would be had the instance in question changed in a particular way. This type of counterfactual analysis helps the explainees to simulate certain aspects of the ML model, thus improving its interpretability [Hoffman et al., 2018]. Notably, evidence from psychology and cognitive sciences suggests that people use counterfactual reasoning daily to analyze what could have happened had they acted differently [Byrne, 2005].
+
+However, the number of counterfactuals that can be generated to explain any event (a selected instance) may be overwhelming [Byrne and Ruth, 2019]. In addition to a large counterfactual search space, currently available methods tend to work for either classification or regression tasks, be restricted to a certain model family (e.g., differential predictors), have trouble dealing with large datasets (both in the number of instances and features), be computationally inefficient, or output out-of-distribution counterfactuals. We address these challenges with a novel Model-agnostic Bayesian Counterfactuals Generator for Explainable Artificial Intelligence, called CounterfactualBay. 
+
+To the best of our knowledge, CounterfactualBay is the first counterfactual generation method based on Bayesian optimization, making it fast to produce a substantial number of high-quality counterfactuals. Our approach is model-agnostic and compatible with regression and classification tasks.
+
+Colab with running project: https://colab.research.google.com/drive/1-5VBkm-PWOpr_sqV8NuiY8wBrWvuTWQn?usp=sharing
