@@ -37,4 +37,4 @@ class Parser:
 
 for experiment_file in glob.iglob('moc/*.json'):
     Parser(experiment_file)
-    os.remove(experiment_file)
+    # os.remove(experiment_file)
