@@ -145,4 +145,4 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
 
     time_measurement.finish()
 
-    return global_counterfactuals
+    return global_counterfactuals, ranker
