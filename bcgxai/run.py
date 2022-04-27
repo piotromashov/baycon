@@ -97,11 +97,7 @@ def execute(dataset_name, target, initial_instance_index, categorical=[], action
             output = {
                 "initial_instance": initial_instance.tolist(),
                 "initial_prediction": str(initial_prediction),
-                "feature_names": feature_names.tolist(),
-                "categorical_features": categorical,
-                "actionable_features": actionable,
-                "feature_ranges": ranges,
-                "feature_weights": weights,
+                "categorical_features": categorical_features,
                 "target_type": target.target_type(),
                 "target_value": target.target_value(),
                 "target_feature": target.target_feature(),

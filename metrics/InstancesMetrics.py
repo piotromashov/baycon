@@ -6,7 +6,6 @@ import pandas as pd
 from common.DataAnalyzer import *
 from common.ScoreCalculator import ScoreCalculator
 from common.Target import Target
-from common.FeatureConstraints import FeatureConstraints
 
 
 def count_and_sort(elements, reverse=False):
@@ -19,13 +18,6 @@ class InstancesMetrics:
     def __init__(self, dataframe, input_json_filename, model):
         with open(input_json_filename) as json_file:
             data = json.load(json_file)
-            feature_constraints = FeatureConstraints(
-                data["feature_names"],
-                data["categorical_features"],
-                data["actionable_features"],
-                data["feature_ranges"],
-                data["feature_weights"]
-            )
             target = Target(data["target_type"], data["target_feature"], data["target_value"])
             self._initial_instance = np.array(data["initial_instance"])
             self._initial_prediction = data["initial_prediction"]
@@ -52,7 +44,8 @@ class InstancesMetrics:
             X = scale(X)
 
         if len(self._counterfactuals) > 0:
-            data_analyzer = DataAnalyzer(feature_constraints, X, Y, self._target)
+            feature_names = dataframe.columns[dataframe.columns != target.target_feature()]
+            data_analyzer = DataAnalyzer(X, Y, feature_names, self._target, self._categorical_features)
             score_calculator = ScoreCalculator(self._initial_instance, self._initial_prediction, self._target,
                                                data_analyzer)
             self._scores, self._scores_x, self._scores_y, self._scores_f = score_calculator.fitness_score(
