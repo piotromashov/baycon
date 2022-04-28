@@ -14,15 +14,22 @@ def scale(X):
 
 
 class DataAnalyzer:
-    def __init__(self, X, Y, feature_names, target, cat_features=None, feature_weights=None):
+    def __init__(self, X, Y, feature_names, target, cat_features=None, actionable_features=None, feature_weights=None):
         if feature_weights is None:
             feature_weights = {}
         if cat_features is None:
             cat_features = []
         self._X = X
         self._Y = Y
-        self._features = feature_names
         self._target = target
+        self._features = feature_names
+
+        if actionable_features is None or len(actionable_features) == 0:
+            actionable_features_mask = [1] * self._features_count
+        else:
+            actionable_features_mask = [1 if f in actionable_features else 0 for f in self._features]
+        self._actionable_features_mask = np.array(actionable_features_mask)
+
         self._feature_weights = [feature_weights[f] if f in feature_weights else 1 for f in self._features]
         self._categorical_features = np.isin(self._features, cat_features)
 
@@ -80,6 +87,9 @@ class DataAnalyzer:
 
     def features(self):
         return self._features
+
+    def actionable_features_mask(self):
+        return self._actionable_features_mask
 
     def categorical_features(self):
         return self._categorical_features

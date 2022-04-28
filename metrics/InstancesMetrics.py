@@ -23,6 +23,7 @@ class InstancesMetrics:
             self._initial_prediction = data["initial_prediction"]
             self._target = target
             self._categorical_features = np.array(data["categorical_features"])
+            self._actionable_features = np.array(data["actionable_features"])
             self._counterfactuals = np.array(data["counterfactuals"])
             self._predictions = np.array(data["predictions"])
             self._total_time = data["total_time"]

@@ -77,6 +77,8 @@ class InstancesGenerator:
         generated_instances = features.transpose()
         instances = np.tile(self._initial_instance, (rows_to_sample, 1))
         instances[update_features_mask] = generated_instances[update_features_mask]
+        unactionable_mask = np.logical_not(self._data_analyzer.actionable_features_mask())
+        instances[:, unactionable_mask] = self._initial_instance[unactionable_mask]
 
         return instances[np.sum(instances != self._initial_instance, axis=1) > 0]
 
