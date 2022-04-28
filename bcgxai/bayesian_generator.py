@@ -56,7 +56,6 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
     instances, scores, _, _, _ = globalInstancesInfo.info()
     global_counterfactuals = globalInstancesInfo.counterfactuals()
     print("Generated initial neighbours: ({}) CFs ({})".format(len(instances), len(global_counterfactuals)))
-    iterationInstancesInfo = globalInstancesInfo
 
     ranker.update(instances, scores)
     ranker.train()

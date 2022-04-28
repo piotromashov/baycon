@@ -6,7 +6,6 @@ import bcgxai.bayesian_generator as bcg_xai
 import bcgxai.time_measurement as time_measurement
 from common.DataAnalyzer import *
 from common.Target import Target
-from common.FeatureConstraints import FeatureConstraints
 
 
 class ModelWrapper:
