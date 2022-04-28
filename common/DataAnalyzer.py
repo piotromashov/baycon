@@ -21,6 +21,7 @@ class DataAnalyzer:
             cat_features = []
         self._X = X
         self._Y = Y
+        self._features_count = self._X.shape[1]
         self._target = target
         self._features = feature_names
 
@@ -47,7 +48,6 @@ class DataAnalyzer:
         self._analyze_y()
 
     def _analyze_x(self):
-        self._features_count = self._X.shape[1]
         X_min_values = np.zeros(self._features_count)
         X_max_values = np.zeros(self._features_count)
         X_min_values[self._numerical_features] = np.quantile(self._X[:, self._numerical_features], 0.05, axis=0)
