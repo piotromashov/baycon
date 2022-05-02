@@ -2,8 +2,8 @@ import json
 
 import pandas as pd
 
-import bcgxai.bayesian_generator as bcg_xai
-import bcgxai.time_measurement as time_measurement
+import baycon.bayesian_generator as baycon
+import baycon.time_measurement as time_measurement
 from common.DataAnalyzer import *
 from common.Target import Target
 
@@ -86,7 +86,7 @@ def execute(dataset_name, target, initial_instance_index, categorical_features=[
                 model_name,
                 run
             ))
-            counterfactuals = bcg_xai.run(initial_instance, initial_prediction, target, data_analyzer, model)
+            counterfactuals, ranker = baycon.run(initial_instance, initial_prediction, target, data_analyzer, model)
             predictions = np.array([])
             try:
                 predictions = model.predict(counterfactuals)

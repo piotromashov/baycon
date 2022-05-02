@@ -2,7 +2,7 @@ from collections import Counter
 
 import numpy as np
 
-import bcgxai.time_measurement as time_measurement
+import baycon.time_measurement as time_measurement
 
 MINIMUM_SCORE_Y = 0.1
 

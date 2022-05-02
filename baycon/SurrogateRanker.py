@@ -1,6 +1,6 @@
 import numpy as np
 
-import bcgxai.acquisition_functions as acq_functions
+import baycon.acquisition_functions as acq_functions
 
 TOP_RANKED = 20
 OVERSAMPLING_AMOUNT = 10

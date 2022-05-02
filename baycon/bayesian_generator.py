@@ -2,10 +2,10 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import LocalOutlierFactor
 
-import bcgxai.time_measurement as time_measurement
-from bcgxai.InstancesGenerator import InstancesGenerator
-from bcgxai.InstancesInfo import InstancesInfo
-from bcgxai.SurrogateRanker import SurrogateRanker
+import baycon.time_measurement as time_measurement
+from baycon.InstancesGenerator import InstancesGenerator
+from baycon.InstancesInfo import InstancesInfo
+from baycon.SurrogateRanker import SurrogateRanker
 from common import numpy_utils as npu
 from common.ScoreCalculator import ScoreCalculator
 from common.Target import *
@@ -144,4 +144,4 @@ def run(initial_instance, initial_prediction, target: Target, data_analyzer, mod
 
     time_measurement.finish()
 
-    return global_counterfactuals
+    return global_counterfactuals, ranker
