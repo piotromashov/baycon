@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use this software or rely on the underlying paper, please cite it as below."
+authors:
+- family-names: "Romashov"
+  given-names: "Piotr"
+  orcid: " https://orcid.org/0000-0002-4775-2205"
+- family-names: "Gjoreski"
+  given-names: "Martin"
+  orcid: "https://orcid.org/0000-0002-1220-7418"
+- family-names: "Sokol"
+  given-names: "Kacper"
+  orcid: "https://orcid.org/0000-0002-9869-5896"
+- family-names: "Martinez"
+  given-names: "Maria Vanina"
+  orcid: "https://orcid.org/0000-0003-2819-4735"
+- family-names: "Langheinrich"
+  given-names: "Marc"
+  orcid: "https://orcid.org/0000-0002-8834-7388"
+title: "BayCon: Model-agnostic Bayesian Counterfactual Generator"
+version: IJCAI22
+date-released: 2022-06-15
+url: "https://github.com/piotromashov/baycon"
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Romashov"
+    given-names: "Piotr"
+    orcid: "https://orcid.org/0000-0002-4775-2205"
+  - family-names: "Gjoreski"
+    given-names: "Martin"
+    orcid: "https://orcid.org/0000-0002-1220-7418"
+  - family-names: "Sokol"
+    given-names: "Kacper"
+    orcid: "https://orcid.org/0000-0002-9869-5896"
+  - family-names: "Martinez"
+    given-names: "Maria Vanina"
+    orcid: "https://orcid.org/0000-0003-2819-4735"
+  - family-names: "Langheinrich"
+    given-names: "Marc"
+    orcid: "https://orcid.org/0000-0002-8834-7388"
+  booktitle: "Proceedings of the 31st International Joint Conference on Artificial Intelligence and the 25th European Conference on Artificial Intelligence"
+  title: "BayCon: Model-agnostic Bayesian Counterfactual Generator"
+  year: 2022
