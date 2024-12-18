@@ -23,6 +23,8 @@ Bayesian optimisation. Such an approach can combine multiple objectives by emplo
 counterfactual search. We demonstrate the advantages of our method through a collection of experiments based on six
 real-life datasets representing three regression tasks and three classification tasks.
 
+Full paper info on [IJCAI BayCon](https://www.ijcai.org/proceedings/2022/104)
+
 ### Reference
 
 If you use this software or rely on the underlying paper, please cite it as below or view the citation file.
